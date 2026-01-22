@@ -1,0 +1,37 @@
+{
+  "simulation_config": {
+    "offline_mode": true,
+    "database_path": "./data/spectral_db/hitran_lines.h5",
+    "use_gpu": false,
+    "num_threads": 4
+  },
+  "atmosphere": {
+    "model": "MID_LATITUDE_SUMMER",
+    "aerosols": {
+      "type": "RURAL",
+      "visibility_km": 23.0
+    },
+    "custom_concentrations": {
+      "CO2": 420.0
+    }
+  },
+  "geometry": {
+    "path_type": "SLANT",
+    "h1_km": 0,
+    "h2_km": 10,
+    "angle_deg": 45,
+    "earth_curvature": true
+  },
+  "spectral": {
+    "min_wavenumber": 2000,
+    "max_wavenumber": 2500,
+    "resolution": 0.01,
+    "line_cutoff": 25.0
+  },
+  "output": {
+    "format": "json",
+    "output_path": "./output",
+    "include_intermediate": false,
+    "quantities": ["transmittance", "radiance", "optical_depth"]
+  }
+}

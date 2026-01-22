@@ -1,0 +1,85 @@
+# Docker Compose configuration for RAF-Tran
+#
+# Usage:
+#   # Build the image
+#   docker-compose build
+#
+#   # Run a simulation
+#   docker-compose run raf-tran --config /app/data/config.json -o /app/output/result.json
+#
+#   # Interactive shell
+#   docker-compose run --entrypoint bash raf-tran
+
+version: '3.8'
+
+services:
+  raf-tran:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: raf-tran:latest
+    container_name: raf-tran
+
+    # Mount data and output directories
+    volumes:
+      # Spectral database (read-only recommended for production)
+      - ./data/spectral_db:/app/data/spectral_db:ro
+      # Configuration files
+      - ./data:/app/data:ro
+      # Output directory (read-write)
+      - ./output:/app/output:rw
+
+    # Environment variables
+    environment:
+      - RAF_TRAN_OFFLINE_MODE=True
+      - PYTHONUNBUFFERED=1
+
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+  # Service for generating the spectral database
+  generate-db:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: raf-tran:latest
+
+    volumes:
+      - ./data/spectral_db:/app/data/spectral_db:rw
+
+    # Override for database generation (requires network access)
+    environment:
+      - RAF_TRAN_OFFLINE_MODE=False
+
+    entrypoint: ["python", "-m", "raf_tran.data.ingestor"]
+    command: ["--output", "/app/data/spectral_db/hitran_lines.h5", "--synthetic"]
+
+  # GPU-enabled service (for systems with NVIDIA GPU)
+  raf-tran-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    image: raf-tran:gpu
+    container_name: raf-tran-gpu
+
+    volumes:
+      - ./data/spectral_db:/app/data/spectral_db:ro
+      - ./data:/app/data:ro
+      - ./output:/app/output:rw
+
+    environment:
+      - RAF_TRAN_OFFLINE_MODE=True
+      - RAF_TRAN_USE_GPU=True
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

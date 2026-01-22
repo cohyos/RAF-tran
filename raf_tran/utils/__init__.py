@@ -1,6 +1,14 @@
-"""Utility functions and constants."""
+"""
+Utility modules for RAF-Tran.
 
-from .constants import *
-from .spectral import wavenumber_to_wavelength, wavelength_to_wavenumber
+This module provides:
+- OutputFormatter: Export results to CSV, JSON, NetCDF
+- Plotting utilities (optional)
+- Validation utilities
+"""
 
-__all__ = ["wavenumber_to_wavelength", "wavelength_to_wavenumber"]
+from raf_tran.utils.output import OutputFormatter
+
+__all__ = [
+    "OutputFormatter",
+]

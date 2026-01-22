@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raf-tran"
+version = "0.1.0"
+description = "Open-source atmospheric radiative transfer simulation system"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "RAF-Tran Contributors"}
+]
+keywords = [
+    "radiative-transfer",
+    "atmospheric-science",
+    "spectroscopy",
+    "HITRAN",
+    "MODTRAN",
+    "remote-sensing"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "h5py>=3.8.0",
+    "pandas>=2.0.0",
+    "xarray>=2023.1.0",
+    "netCDF4>=1.6.0",
+    "pyyaml>=6.0",
+    "numba>=0.57.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "cupy>=12.0.0",
+]
+dev = [
+    "pytest>=7.3.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.0.270",
+    "mypy>=1.3.0",
+]
+full = [
+    "radis>=0.14.0",
+    "hapi>=1.2.2",
+    "PyMieScatt>=1.8.0",
+]
+
+[project.scripts]
+raf-tran = "raf_tran.cli:main"
+generate-db = "raf_tran.data.ingestor:main"
+
+[project.urls]
+Homepage = "https://github.com/cohyos/RAF-tran"
+Documentation = "https://github.com/cohyos/RAF-tran#readme"
+Repository = "https://github.com/cohyos/RAF-tran"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["raf_tran*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "W", "I", "N", "D", "UP", "B", "C4", "SIM"]
+ignore = ["D100", "D104", "D105"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
