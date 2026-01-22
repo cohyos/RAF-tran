@@ -422,22 +422,28 @@ class GasEngine:
         # Simplified continuum model
         # Real implementation should use MT_CKD tables
 
-        # Convert to number densities
+        # Convert to number densities [molecules/cm^3]
         n_air = (pressure_pa / (BOLTZMANN_CONSTANT * temperature)) * 1e-6
         n_h2o = n_air * h2o_vmr
 
         # Temperature correction
         theta = 296.0 / temperature
 
-        # Self-continuum coefficient (very simplified)
-        # C_s ~ 4e-25 * exp(-E/kT) in typical window regions
-        C_self = 4e-25 * (theta ** 4) * np.exp(-400 / temperature)
+        # Self-continuum cross-section [cm^2/molecule]
+        # Typical values ~1e-24 cm^2/molecule in window regions at 296K
+        # The self-continuum scales as n_h2o (collision partner is another H2O)
+        C_self = 1e-24 * (theta ** 4) * np.exp(-400 / temperature)
 
-        # Foreign continuum coefficient
-        C_foreign = 5e-26 * (theta ** 2)
+        # Foreign continuum cross-section [cm^2/molecule]
+        # Typically ~10x weaker than self-continuum
+        C_foreign = 1e-25 * (theta ** 2)
 
-        # Total continuum
-        continuum = (C_self * n_h2o + C_foreign * n_air) * n_h2o
+        # Total continuum absorption coefficient [cm^-1]
+        # Self: cross_section * n_h2o (absorber density)
+        # Foreign: cross_section * n_h2o (absorber density)
+        # Note: the n_h2o factor for collision partners is already
+        # implicitly included in the cross-section values above
+        continuum = C_self * n_h2o + C_foreign * n_h2o
 
         return continuum
 

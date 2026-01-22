@@ -162,6 +162,10 @@ def mie_coefficients(x: float, m: complex) -> Tuple[float, float, float]:
     Q_sca = 0.0
     g_num = 0.0  # Numerator for asymmetry factor
 
+    # Initialize previous coefficients for asymmetry factor calculation
+    a_n_prev = complex(0.0, 0.0)
+    b_n_prev = complex(0.0, 0.0)
+
     for n in range(1, nstop + 1):
         fn = (2.0 * n + 1.0) / (n * (n + 1.0))
         psi = (2.0 * n - 1.0) * psi1 / x - psi0

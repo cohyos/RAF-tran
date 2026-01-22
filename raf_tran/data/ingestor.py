@@ -406,21 +406,30 @@ class DataIngestor:
         for mol_name in molecules:
             mol_id = self.MOLECULE_IDS.get(mol_name, 1)
 
-            # Number of lines depends on molecule
-            num_lines = {
-                "H2O": 50000,
-                "CO2": 30000,
-                "O3": 20000,
-                "CH4": 15000,
-                "N2O": 10000,
-            }.get(mol_name, 5000)
+            # Number of lines per 100 cm^-1 (scaled by spectral range)
+            # Real HITRAN has ~1000-5000 significant lines per 100 cm^-1
+            lines_per_100cm = {
+                "H2O": 500,
+                "CO2": 300,
+                "O3": 200,
+                "CH4": 150,
+                "N2O": 100,
+            }.get(mol_name, 50)
+
+            spectral_range = wn_max - wn_min
+            num_lines = int(lines_per_100cm * spectral_range / 100)
+            num_lines = max(100, min(num_lines, 10000))  # Reasonable bounds
 
             # Generate random wavenumber positions
             wavenumbers = rng.uniform(wn_min, wn_max, num_lines)
             wavenumbers.sort()
 
             # Generate realistic line intensities (log-normal distribution)
-            log_intensities = rng.normal(-22, 3, num_lines)  # log10 scale
+            # HITRAN intensities typically range from 1e-30 to 1e-19
+            # Most lines are weak, few are strong - use skewed distribution
+            log_intensities = rng.normal(-25, 1.5, num_lines)  # log10 scale, narrower spread
+            # Clip to realistic HITRAN range
+            log_intensities = np.clip(log_intensities, -30, -19)
             intensities = 10 ** log_intensities
 
             # Generate other parameters
