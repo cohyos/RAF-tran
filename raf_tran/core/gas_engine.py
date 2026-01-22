@@ -164,6 +164,9 @@ def compute_absorption_lbl(
     all spectral lines using Lorentzian profiles scaled for temperature
     and pressure.
 
+    This function parallelizes over wavenumber grid points (not lines)
+    to avoid race conditions when updating the absorption array.
+
     Args:
         wavenumber_grid: Spectral grid [cm^-1]
         line_centers: Line center wavenumbers [cm^-1]
@@ -194,13 +197,21 @@ def compute_absorption_lbl(
     # Temperature ratio
     T_ratio = T_ref / temperature
 
-    for j in prange(n_lines):
-        # Skip weak lines
+    # Pre-compute scaled line properties (serial loop - no race conditions)
+    scaled_gammas = np.empty(n_lines)
+    scaled_intensities = np.empty(n_lines)
+    shifted_centers = np.empty(n_lines)
+
+    for j in range(n_lines):
+        # Skip weak lines by setting intensity to zero
         if line_intensities[j] < 1e-30:
+            scaled_intensities[j] = 0.0
+            scaled_gammas[j] = 0.0
+            shifted_centers[j] = line_centers[j]
             continue
 
         # Pressure-scaled line width (Lorentzian)
-        gamma = line_widths[j] * (pressure_atm / P_ref) * (T_ratio ** temp_exp[j])
+        scaled_gammas[j] = line_widths[j] * (pressure_atm / P_ref) * (T_ratio ** temp_exp[j])
 
         # Temperature-scaled line intensity
         # S(T) = S(T_ref) * Q(T_ref)/Q(T) * exp(-c2*E"/T) / exp(-c2*E"/T_ref)
@@ -218,18 +229,31 @@ def compute_absorption_lbl(
         # Partition function ratio (approximation for linear molecules)
         Q_ratio = T_ratio  # Simplified - exact depends on molecule
 
-        S_T = line_intensities[j] * Q_ratio * boltz_factor * stim_factor
+        # Pre-multiply by number_density to avoid doing it in the inner loop
+        scaled_intensities[j] = line_intensities[j] * Q_ratio * boltz_factor * stim_factor * number_density
 
         # Pressure-shifted line center
-        nu_shifted = nu_center + pressure_shifts[j] * pressure_atm
+        shifted_centers[j] = nu_center + pressure_shifts[j] * pressure_atm
 
-        # Add line contribution using Lorentzian profile
-        for i in range(n_grid):
-            dnu = wavenumber_grid[i] - nu_shifted
+    # Parallelize over grid points - each thread writes to a unique index
+    # This eliminates the race condition from the previous implementation
+    for i in prange(n_grid):
+        wn_i = wavenumber_grid[i]
+        total = 0.0
+
+        for j in range(n_lines):
+            # Skip lines with zero intensity
+            if scaled_intensities[j] <= 0.0:
+                continue
+
+            dnu = wn_i - shifted_centers[j]
             if np.abs(dnu) <= cutoff:
+                gamma = scaled_gammas[j]
                 # Lorentzian line shape
                 line_shape = gamma / (np.pi * (dnu * dnu + gamma * gamma))
-                absorption[i] += S_T * line_shape * number_density
+                total += scaled_intensities[j] * line_shape
+
+        absorption[i] = total
 
     return absorption
 

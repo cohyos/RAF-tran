@@ -467,14 +467,11 @@ class TestDR1DataHandling:
         assert result.transmittance.dtype == np.float64
         assert result.optical_depth.dtype == np.float64
 
-    @pytest.mark.skip(reason="Known issue: numba parallel execution causes non-determinism")
     def test_dr1_2_reproducibility(self):
         """DR-1.2: Same configuration shall produce identical results.
 
-        NOTE: Currently skipped due to non-determinism in numba prange.
-        The compute_absorption_lbl function uses parallel execution which
-        can cause race conditions in the absorption array updates.
-        TODO: Fix by restructuring to avoid race conditions.
+        Fixed: The compute_absorption_lbl function was restructured to parallelize
+        over wavenumber grid points instead of lines, eliminating race conditions.
         """
         config = {
             "atmosphere": {"model": "US_STANDARD_1976"},

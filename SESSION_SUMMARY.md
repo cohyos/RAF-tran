@@ -3,7 +3,8 @@
 ## Project Overview
 **Repository:** `/home/user/RAF-tran`
 **Purpose:** Open-source MODTRAN-based atmospheric radiative transfer simulation tool
-**Active Branch:** `claude/continue-previous-work-Oe03I`
+**Current Branch:** `claude/atmospheric-simulation-tool-zY7Uf`
+**Push Branch:** `claude/continue-previous-work-Oe03I` (use this for git push operations)
 
 ## Current Progress
 
@@ -15,15 +16,18 @@
    - Synthetic database generation (`raf_tran/data/ingestor.py:409-424`)
 3. ✅ **Validity Checks** - Physics-based tests for simulation accuracy
 4. ✅ **ATP Tests** - Acceptance Test Procedure tests for all functional requirements
-5. ✅ **All Tests Passing** - 91 passed, 1 skipped
+5. ✅ **All Tests Passing** - 92 passed, 0 skipped
+6. ✅ **Non-determinism Bug Fixed** - Restructured `compute_absorption_lbl` to parallelize over grid points
 
 ### Test Results
 ```
-tests/atp/test_acceptance.py          - 28 tests (27 passed, 1 skipped)
+tests/atp/test_acceptance.py          - 28 tests (all passed)
 tests/integration/test_simulation.py  - 15 tests (all passed)
 tests/unit/test_atmosphere.py         - 19 tests (all passed)
 tests/unit/test_scattering.py         - 14 tests (all passed)
 tests/validity/test_physics_validity.py - 15 tests (all passed)
+
+Total: 92 passed, 0 skipped
 ```
 
 ## Active File Structure
@@ -118,11 +122,10 @@ atm = StandardAtmospheres.tropical()
 
 ## Known Issues
 
-1. **Non-determinism in Simulation** (`test_dr1_2_reproducibility` - SKIPPED)
-   - **Location:** `raf_tran/core/gas_engine.py` - `compute_absorption_lbl` function
-   - **Cause:** Numba `prange` parallel execution causes race conditions when updating absorption array
-   - **Impact:** Running same simulation twice may produce slightly different results (~0.1-20% variation)
-   - **TODO:** Restructure to avoid race conditions (accumulate per-line then sum)
+1. ~~**Non-determinism in Simulation** - FIXED~~
+   - **Status:** RESOLVED
+   - **Fix:** Restructured `compute_absorption_lbl` to parallelize over wavenumber grid points instead of lines
+   - All 92 tests now pass (including `test_dr1_2_reproducibility`)
 
 2. **Synthetic Database Limitations**
    - Line intensities are randomly generated, not from real HITRAN
@@ -131,20 +134,16 @@ atm = StandardAtmospheres.tropical()
 
 ## Immediate Next Tasks
 
-1. **Fix Non-determinism Bug** (HIGH PRIORITY)
-   - Modify `compute_absorption_lbl` in `raf_tran/core/gas_engine.py`
-   - Change from parallel update of shared array to per-thread accumulation then reduction
-
-2. **Integrate Real HITRAN Data**
+1. **Integrate Real HITRAN Data**
    - Install `hitran-api` package
    - Update `ingestor.py` to download real spectral lines
    - Re-run tests with real data
 
-3. **Performance Optimization**
+2. **Performance Optimization**
    - Profile simulation performance
    - Consider GPU acceleration (CuPy already supported)
 
-4. **Documentation**
+3. **Documentation**
    - Add API documentation
    - Create user guide with examples
 
@@ -157,5 +156,48 @@ python -m pytest tests/atp/ -v  # ATP tests only
 ```
 
 ## Git Information
-- **Primary Branch:** `claude/continue-previous-work-Oe03I`
-- **Secondary Branch:** `claude/atmospheric-simulation-tool-zY7Uf`
+- **Current Branch:** `claude/atmospheric-simulation-tool-zY7Uf` (local working branch)
+- **Push Branch:** `claude/continue-previous-work-Oe03I` (for pushing changes)
+- **Last Commit:** `920ee64` - "Add session summary documentation for continuation"
+
+### Branch Status
+Both branches are aligned at commit `920ee64`. Use `claude/continue-previous-work-Oe03I` for pushing to remote.
+
+---
+
+# NEW SESSION CONTINUATION PROMPT
+
+Copy and paste the following prompt to start a new session:
+
+---
+
+## Prompt for New Session:
+
+```
+I want to continue working on the RAF-Tran atmospheric radiative transfer simulation project.
+
+**Project Location:** /home/user/RAF-tran
+**Current Branch:** claude/atmospheric-simulation-tool-zY7Uf
+
+Please read the SESSION_SUMMARY.md file in the project root to understand the current state.
+
+**Quick Context:**
+- RAF-Tran is an open-source MODTRAN-based atmospheric radiative transfer tool
+- The simulation core is complete with gas absorption, scattering, and RTE solver
+- All tests pass (91 passed, 1 skipped)
+- Bug fixes applied: Mie scattering init, H2O continuum formula, synthetic database
+
+**Immediate Priority Tasks:**
+1. Fix the numba parallel non-determinism bug in `raf_tran/core/gas_engine.py:compute_absorption_lbl`
+2. Integrate real HITRAN spectral data
+3. Performance optimization
+
+**Git Note:** For pushing changes, use branch `claude/continue-previous-work-Oe03I`
+
+Please start by:
+1. Reading SESSION_SUMMARY.md for full context
+2. Running `python -m pytest tests/ -q` to verify tests still pass
+3. Then proceed with the next priority task
+```
+
+---
