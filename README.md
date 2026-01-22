@@ -137,11 +137,51 @@ print(f"Blackbody flux at {T} K: {flux:.1f} W/m²")
 
 ## Examples
 
-See the `examples/` directory for detailed examples:
+The `examples/` directory contains 10 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
+- Command-line arguments for customization
+- Detailed console output with explanations
+- Generated plots (requires matplotlib)
 
-- `basic_radiative_transfer.py` - Clear-sky solar radiation
-- `mie_scattering_aerosol.py` - Aerosol optical properties
-- `thermal_radiation.py` - Longwave radiation and heating rates
+Run any example with `--help` to see available options:
+
+```bash
+cd examples
+python 01_solar_zenith_angle_study.py --help
+```
+
+### Available Examples
+
+| # | Example | Description |
+|---|---------|-------------|
+| 01 | `solar_zenith_angle_study.py` | Effect of sun angle on radiation |
+| 02 | `spectral_transmission.py` | Why the sky is blue (Rayleigh scattering) |
+| 03 | `aerosol_types_comparison.py` | Optical properties of different aerosols |
+| 04 | `atmospheric_profiles.py` | Compare standard atmosphere models |
+| 05 | `greenhouse_effect.py` | Demonstrate atmospheric warming mechanism |
+| 06 | `surface_albedo_effects.py` | Ice-albedo feedback and surface types |
+| 07 | `cloud_radiative_effects.py` | How clouds affect climate (warming vs cooling) |
+| 08 | `ozone_uv_absorption.py` | Ozone layer and UV protection |
+| 09 | `radiative_heating_rates.py` | Atmospheric heating/cooling calculations |
+| 10 | `satellite_observation.py` | Simulate satellite remote sensing |
+
+### Example Usage
+
+```bash
+# Study solar zenith angle effects
+python 01_solar_zenith_angle_study.py --wavelength 0.55 --albedo 0.3
+
+# Compare aerosol types at specific wavelength
+python 03_aerosol_types_comparison.py --wavelength 0.55 --radius 0.5
+
+# Greenhouse effect with different optical depths
+python 05_greenhouse_effect.py --tau 2.5 --albedo 0.3
+
+# Cloud effects at high altitude
+python 07_cloud_radiative_effects.py --cloud-type Cirrus --sza 30
+
+# Ozone depletion impact on UV
+python 08_ozone_uv_absorption.py --ozone-column 200 --sza 45
+```
 
 ## Testing
 
