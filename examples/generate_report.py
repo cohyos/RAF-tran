@@ -193,7 +193,7 @@ def create_pdf_report(results, output_path):
     # Summary table
     summary_data = [["#", "Example", "Status"]]
     for filename, description, output, success, plot_path in results:
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[X] FAIL"
         num = filename.split("_")[0]
         summary_data.append([num, description[:40], status])
 
@@ -298,7 +298,7 @@ def main():
 
         plot_path = find_plot_for_example(filename, script_dir)
 
-        status = "✓" if success else "✗"
+        status = "[OK]" if success else "[X]"
         plot_status = "📊" if plot_path else "  "
         print(f"{status} {plot_status}")
 
@@ -309,9 +309,9 @@ def main():
     print("Generating PDF report...")
 
     if create_pdf_report(results, pdf_path):
-        print(f"✓ Report saved to: {pdf_path}")
+        print(f"[OK] Report saved to: {pdf_path}")
     else:
-        print("✗ Failed to create PDF report")
+        print("[X] Failed to create PDF report")
 
         # Fallback: save text report
         txt_path = output_dir / f"raf_tran_examples_report_{timestamp}.txt"
@@ -331,7 +331,7 @@ def main():
                 f.write(output)
                 f.write("\n")
 
-        print(f"✓ Text report saved to: {txt_path}")
+        print(f"[OK] Text report saved to: {txt_path}")
 
     # List generated plots
     plots = list(script_dir.glob("*.png"))

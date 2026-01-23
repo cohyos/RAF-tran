@@ -42,7 +42,7 @@ CLOUD_TYPES = {
         "height": 10000,  # m
         "thickness": 1000,
         "tau_vis": 0.5,
-        "r_eff": 25.0,  # μm (ice crystals)
+        "r_eff": 25.0,  # um (ice crystals)
         "description": "High, thin ice clouds"
     },
     "Cirrostratus": {
@@ -56,7 +56,7 @@ CLOUD_TYPES = {
         "height": 4000,
         "thickness": 2000,
         "tau_vis": 10.0,
-        "r_eff": 10.0,  # μm (water droplets)
+        "r_eff": 10.0,  # um (water droplets)
         "description": "Middle-level gray clouds"
     },
     "Stratocumulus": {
@@ -278,7 +278,7 @@ def main():
     print("=" * 80)
     print("CLOUD RADIATIVE EFFECTS")
     print("=" * 80)
-    print(f"\nSolar zenith angle: {args.sza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
     print(f"Surface albedo: {args.surface_albedo}")
 
     mu0 = np.cos(np.radians(args.sza))
@@ -300,10 +300,10 @@ def main():
     print("CLOUD RADIATIVE FORCING ANALYSIS")
     print("=" * 80)
 
-    print(f"\n{'Cloud Type':<15} {'Height':>8} {'τ_vis':>8} {'CRE_SW':>10} {'CRE_LW':>10} "
+    print(f"\n{'Cloud Type':<15} {'Height':>8} {'tau_vis':>8} {'CRE_SW':>10} {'CRE_LW':>10} "
           f"{'CRE_Net':>10} {'Effect':>10}")
-    print(f"{'':15} {'(km)':>8} {'':>8} {'(W/m²)':>10} {'(W/m²)':>10} "
-          f"{'(W/m²)':>10} {'':>10}")
+    print(f"{'':15} {'(km)':>8} {'':>8} {'(W/m^2)':>10} {'(W/m^2)':>10} "
+          f"{'(W/m^2)':>10} {'':>10}")
     print("-" * 85)
 
     results = {}
@@ -350,8 +350,8 @@ Cloud Radiative Effect (CRE):
     - POSITIVE (warming effect) - reduces OLR
 
   CRE_Net = CRE_SW + CRE_LW:
-    - LOW clouds: Strong SW cooling, weak LW warming → NET COOLING
-    - HIGH clouds: Weak SW cooling, strong LW warming → NET WARMING
+    - LOW clouds: Strong SW cooling, weak LW warming -> NET COOLING
+    - HIGH clouds: Weak SW cooling, strong LW warming -> NET WARMING
 """)
 
     # High vs low cloud comparison
@@ -365,14 +365,14 @@ Cloud Radiative Effect (CRE):
 
         print(f"""
   Cirrus (high, thin):
-    - Cloud top is COLD → emits little LW → strong LW warming
-    - Thin → reflects little SW → weak SW cooling
-    - Net: {cirrus['cre_net']:+.1f} W/m² (warming)
+    - Cloud top is COLD -> emits little LW -> strong LW warming
+    - Thin -> reflects little SW -> weak SW cooling
+    - Net: {cirrus['cre_net']:+.1f} W/m^2 (warming)
 
   Stratocumulus (low, thick):
-    - Cloud top is WARM → emits more LW → weak LW warming
-    - Thick → reflects much SW → strong SW cooling
-    - Net: {strat['cre_net']:+.1f} W/m² (cooling)
+    - Cloud top is WARM -> emits more LW -> weak LW warming
+    - Thick -> reflects much SW -> strong SW cooling
+    - Net: {strat['cre_net']:+.1f} W/m^2 (cooling)
 """)
 
     # Plotting
@@ -404,7 +404,7 @@ Cloud Radiative Effect (CRE):
 
             ax1.axhline(0, color='black', linestyle='-', linewidth=0.5)
             ax1.set_xlabel('Cloud Type')
-            ax1.set_ylabel('Radiative Forcing (W/m²)')
+            ax1.set_ylabel('Radiative Forcing (W/m^2)')
             ax1.set_title('Cloud Radiative Effect Components')
             ax1.set_xticks(x_pos)
             ax1.set_xticklabels(names, rotation=45, ha='right')
@@ -420,7 +420,7 @@ Cloud Radiative Effect (CRE):
                            textcoords="offset points", xytext=(5, 5), fontsize=8)
             ax2.axhline(0, color='black', linestyle='--', alpha=0.5)
             ax2.set_xlabel('Cloud Base Height (km)')
-            ax2.set_ylabel('Net CRE (W/m²)')
+            ax2.set_ylabel('Net CRE (W/m^2)')
             ax2.set_title('Net Cloud Forcing vs Height')
             ax2.grid(True, alpha=0.3)
 
@@ -443,8 +443,8 @@ Cloud Radiative Effect (CRE):
             lim = max(abs(min(cre_sw)), abs(max(cre_lw))) * 1.1
             ax3.plot([-lim, 0], [lim, 0], 'g--', alpha=0.5, label='Net CRE = 0')
 
-            ax3.set_xlabel('CRE_SW (W/m²)')
-            ax3.set_ylabel('CRE_LW (W/m²)')
+            ax3.set_xlabel('CRE_SW (W/m^2)')
+            ax3.set_ylabel('CRE_LW (W/m^2)')
             ax3.set_title('SW vs LW Cloud Forcing')
             ax3.legend(loc='lower left', fontsize=7)
             ax3.grid(True, alpha=0.3)

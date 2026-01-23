@@ -43,28 +43,28 @@ except ImportError:
 
 # Satellite channels (simplified representations)
 SATELLITE_CHANNELS = {
-    "VIS (0.65 μm)": {
-        "center_wl": 0.65,  # μm
+    "VIS (0.65 um)": {
+        "center_wl": 0.65,  # um
         "type": "reflective",
         "description": "Visible - clouds and surface reflectance"
     },
-    "NIR (0.86 μm)": {
+    "NIR (0.86 um)": {
         "center_wl": 0.86,
         "type": "reflective",
         "description": "Near-IR - vegetation, clouds"
     },
-    "IR Window (11 μm)": {
+    "IR Window (11 um)": {
         "center_wn": 909,  # cm⁻¹
         "type": "thermal",
         "description": "IR window - surface/cloud temperature"
     },
-    "Water Vapor (6.7 μm)": {
+    "Water Vapor (6.7 um)": {
         "center_wn": 1493,  # cm⁻¹
         "type": "thermal",
         "tau_wv_scale": 5.0,  # Strong water vapor absorption
         "description": "WV channel - upper tropospheric humidity"
     },
-    "CO2 (15 μm)": {
+    "CO2 (15 um)": {
         "center_wn": 667,  # cm⁻¹
         "type": "thermal",
         "tau_co2": 50.0,  # Very optically thick
@@ -79,11 +79,11 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Satellite channels simulated:
-  VIS (0.65 μm)      - Visible reflectance
-  NIR (0.86 μm)      - Near-infrared reflectance
-  IR Window (11 μm)  - Surface/cloud temperature
-  Water Vapor (6.7μm)- Upper tropospheric humidity
-  CO2 (15 μm)        - Stratospheric temperature
+  VIS (0.65 um)      - Visible reflectance
+  NIR (0.86 um)      - Near-infrared reflectance
+  IR Window (11 um)  - Surface/cloud temperature
+  Water Vapor (6.7um)- Upper tropospheric humidity
+  CO2 (15 um)        - Stratospheric temperature
 
 Examples:
   %(prog)s                              # Clear sky
@@ -150,7 +150,7 @@ def brightness_temperature(radiance, wavenumber):
     Parameters
     ----------
     radiance : float
-        Radiance in W/m²/sr/cm⁻¹
+        Radiance in W/m^2/sr/cm⁻¹
     wavenumber : float
         Wavenumber in cm⁻¹
 
@@ -168,11 +168,11 @@ def brightness_temperature(radiance, wavenumber):
     c2 = PLANCK_CONSTANT * SPEED_OF_LIGHT / BOLTZMANN_CONSTANT
 
     # Inverse Planck function
-    # B = c1 * nu³ / (exp(c2*nu/T) - 1)
-    # T = c2 * nu / ln(1 + c1*nu³/B)
+    # B = c1 * nu^3 / (exp(c2*nu/T) - 1)
+    # T = c2 * nu / ln(1 + c1*nu^3/B)
 
-    # Convert radiance from W/m²/sr/cm⁻¹ to W/m²/sr/m⁻¹
-    B = radiance / 100  # W/m²/sr/m⁻¹
+    # Convert radiance from W/m^2/sr/cm⁻¹ to W/m^2/sr/m⁻¹
+    B = radiance / 100  # W/m^2/sr/m⁻¹
 
     if B <= 0:
         return 0.0
@@ -187,8 +187,8 @@ def main():
     print("=" * 80)
     print("SATELLITE OBSERVATION SIMULATION")
     print("=" * 80)
-    print(f"\nSolar zenith angle: {args.sza}°")
-    print(f"Viewing zenith angle: {args.vza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
+    print(f"Viewing zenith angle: {args.vza} deg")
     print(f"Surface type: {args.surface_type}")
     print(f"Cloud cover: {args.cloud_cover * 100:.0f}%")
     if args.cloud_cover > 0:
@@ -312,7 +312,7 @@ def main():
             for i in range(n_layers):
                 tau_ir[i] = wv_scale * h2o_vmr[i] * number_density[i] * dz[i] * 1e-28
 
-            # CO2 absorption for 15 μm channel
+            # CO2 absorption for 15 um channel
             if "CO2" in channel_name:
                 tau_ir += props.get("tau_co2", 0) * np.ones(n_layers) / n_layers
 
@@ -373,18 +373,18 @@ def main():
     if args.cloud_cover > 0:
         print(f"""
 CLOUD DETECTION:
-  - VIS channel shows high reflectance ({results['VIS (0.65 μm)']['value']:.0f}%) due to clouds
-  - IR Window shows cold brightness temp ({results['IR Window (11 μm)']['value']:.0f} K)
+  - VIS channel shows high reflectance ({results['VIS (0.65 um)']['value']:.0f}%) due to clouds
+  - IR Window shows cold brightness temp ({results['IR Window (11 um)']['value']:.0f} K)
     indicating cloud-top at ~{args.cloud_height/1000:.1f} km
   - Cloud-top temp ({T_cloud:.0f} K) vs surface ({T_surface:.0f} K): Δ={T_surface-T_cloud:.0f} K
 """)
     else:
         print(f"""
 CLEAR SKY OBSERVATIONS:
-  - VIS reflectance ({results['VIS (0.65 μm)']['value']:.0f}%) shows {args.surface_type} surface
-  - IR Window ({results['IR Window (11 μm)']['value']:.0f} K) shows surface temperature
-  - Water Vapor channel ({results['Water Vapor (6.7 μm)']['value']:.0f} K) shows upper troposphere
-  - CO2 channel ({results['CO2 (15 μm)']['value']:.0f} K) shows stratospheric temperature
+  - VIS reflectance ({results['VIS (0.65 um)']['value']:.0f}%) shows {args.surface_type} surface
+  - IR Window ({results['IR Window (11 um)']['value']:.0f} K) shows surface temperature
+  - Water Vapor channel ({results['Water Vapor (6.7 um)']['value']:.0f} K) shows upper troposphere
+  - CO2 channel ({results['CO2 (15 um)']['value']:.0f} K) shows stratospheric temperature
 """)
 
     # Plotting
@@ -417,7 +417,7 @@ CLEAR SKY OBSERVATIONS:
             ax2 = axes[0, 1]
 
             channels = list(results.keys())
-            thermal_channels = [c for c in channels if 'μm)' in c and float(c.split('(')[1].split()[0]) > 1]
+            thermal_channels = [c for c in channels if 'um)' in c and float(c.split('(')[1].split()[0]) > 1]
             reflect_channels = [c for c in channels if c not in thermal_channels]
 
             # Reflective channels

@@ -117,12 +117,12 @@ def main():
             results.append((filename, success))
 
             if success:
-                print(f"\n✓ {filename} completed successfully")
+                print(f"\n[OK] {filename} completed successfully")
             else:
-                print(f"\n✗ {filename} exited with code {result.returncode}")
+                print(f"\n[X] {filename} exited with code {result.returncode}")
 
         except Exception as e:
-            print(f"\n✗ {filename} failed: {e}")
+            print(f"\n[X] {filename} failed: {e}")
             results.append((filename, False))
 
         if args.pause and i < len(examples_to_run):
@@ -137,7 +137,7 @@ def main():
     failed = len(results) - passed
 
     for filename, success in results:
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[X] FAIL"
         print(f"  {status}  {filename}")
 
     print("-" * 70)

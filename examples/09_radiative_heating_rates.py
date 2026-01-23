@@ -56,7 +56,7 @@ where:
 
 Examples:
   %(prog)s                          # Default calculation
-  %(prog)s --sza 60                 # Sun at 60° zenith
+  %(prog)s --sza 60                 # Sun at 60 deg zenith
   %(prog)s --absorber-tau 0.5       # Add absorbing gas
         """
     )
@@ -93,11 +93,11 @@ def calculate_heating_rate(flux_up, flux_down, flux_direct, pressure, cp=1004.0)
     Parameters
     ----------
     flux_up : array
-        Upward flux at levels (W/m²)
+        Upward flux at levels (W/m^2)
     flux_down : array
-        Downward diffuse flux at levels (W/m²)
+        Downward diffuse flux at levels (W/m^2)
     flux_direct : array
-        Direct (solar) flux at levels (W/m²)
+        Direct (solar) flux at levels (W/m^2)
     pressure : array
         Pressure at levels (Pa)
     cp : float
@@ -130,7 +130,7 @@ def main():
     print("=" * 80)
     print("RADIATIVE HEATING AND COOLING RATES")
     print("=" * 80)
-    print(f"\nSolar zenith angle: {args.sza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
     print(f"IR absorber optical depth: {args.absorber_tau}")
     print(f"Atmosphere type: {args.atmosphere}")
 
@@ -205,10 +205,10 @@ def main():
     sw_absorbed_surface = (1 - 0.15) * (result_sw.flux_direct[-1] + result_sw.flux_down[-1])
     sw_absorbed_atm = SOLAR_CONSTANT * mu0 - result_sw.flux_up[0] - sw_absorbed_surface
 
-    print(f"\nSolar constant × μ₀: {SOLAR_CONSTANT * mu0:.1f} W/m²")
-    print(f"Reflected at TOA: {result_sw.flux_up[0]:.1f} W/m²")
-    print(f"Absorbed by surface: {sw_absorbed_surface:.1f} W/m²")
-    print(f"Absorbed by atmosphere: {sw_absorbed_atm:.1f} W/m²")
+    print(f"\nSolar constant × u0: {SOLAR_CONSTANT * mu0:.1f} W/m^2")
+    print(f"Reflected at TOA: {result_sw.flux_up[0]:.1f} W/m^2")
+    print(f"Absorbed by surface: {sw_absorbed_surface:.1f} W/m^2")
+    print(f"Absorbed by atmosphere: {sw_absorbed_atm:.1f} W/m^2")
     print(f"Max SW heating rate: {np.max(heating_sw):.2f} K/day at {z_mid[np.argmax(heating_sw)]/1000:.1f} km")
 
     # LONGWAVE CALCULATION
@@ -247,9 +247,9 @@ def main():
     surface_emission = STEFAN_BOLTZMANN * T_surface**4
     backradiation = result_lw.flux_down[-1]
 
-    print(f"\nSurface emission: {surface_emission:.1f} W/m²")
-    print(f"Outgoing LW at TOA: {olr:.1f} W/m²")
-    print(f"Atmospheric backradiation: {backradiation:.1f} W/m²")
+    print(f"\nSurface emission: {surface_emission:.1f} W/m^2")
+    print(f"Outgoing LW at TOA: {olr:.1f} W/m^2")
+    print(f"Atmospheric backradiation: {backradiation:.1f} W/m^2")
     print(f"Max LW cooling rate: {np.min(heating_lw):.2f} K/day at {z_mid[np.argmin(heating_lw)]/1000:.1f} km")
 
     # NET HEATING
@@ -307,7 +307,7 @@ Key observations:
             import matplotlib.pyplot as plt
 
             fig, axes = plt.subplots(2, 3, figsize=(16, 12))
-            fig.suptitle(f'Radiative Heating Rates (SZA={args.sza}°, {args.atmosphere} atmosphere)',
+            fig.suptitle(f'Radiative Heating Rates (SZA={args.sza} deg, {args.atmosphere} atmosphere)',
                         fontsize=14, fontweight='bold')
 
             # Plot 1: Temperature profile
@@ -323,7 +323,7 @@ Key observations:
             ax2.plot(result_sw.flux_direct, z_levels / 1000, 'orange', linewidth=2, label='Direct')
             ax2.plot(result_sw.flux_down, z_levels / 1000, 'gold', linewidth=2, label='Diffuse down')
             ax2.plot(result_sw.flux_up, z_levels / 1000, 'yellow', linewidth=2, label='Diffuse up')
-            ax2.set_xlabel('Flux (W/m²)')
+            ax2.set_xlabel('Flux (W/m^2)')
             ax2.set_ylabel('Altitude (km)')
             ax2.set_title('Shortwave Flux Profiles')
             ax2.legend()
@@ -335,7 +335,7 @@ Key observations:
             ax3.plot(result_lw.flux_down, z_levels / 1000, 'b-', linewidth=2, label='Downward')
             ax3.plot(result_lw.flux_up - result_lw.flux_down, z_levels / 1000, 'k--',
                     linewidth=2, label='Net up')
-            ax3.set_xlabel('Flux (W/m²)')
+            ax3.set_xlabel('Flux (W/m^2)')
             ax3.set_ylabel('Altitude (km)')
             ax3.set_title('Longwave Flux Profiles')
             ax3.legend()
@@ -397,7 +397,7 @@ RADIATIVE HEATING IN THE ATMOSPHERE:
 
 2. LONGWAVE (THERMAL) COOLING:
    - Atmosphere emits IR radiation
-   - Emission increases with temperature (T⁴)
+   - Emission increases with temperature (T^4)
    - Net cooling because emission > absorption from below
 
 3. HEATING RATE FORMULA:

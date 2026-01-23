@@ -64,7 +64,7 @@ Surface types and typical albedos:
 
 Examples:
   %(prog)s                          # Default comparison
-  %(prog)s --sza 60                 # Sun at 60° zenith
+  %(prog)s --sza 60                 # Sun at 60 deg zenith
   %(prog)s --wavelength 0.55        # Green light only
         """
     )
@@ -74,7 +74,7 @@ Examples:
     )
     parser.add_argument(
         "--wavelength", type=float, default=0.55,
-        help="Wavelength in μm for atmospheric calculation (default: 0.55)"
+        help="Wavelength in um for atmospheric calculation (default: 0.55)"
     )
     parser.add_argument(
         "--no-plot", action="store_true",
@@ -93,7 +93,7 @@ def main():
     print("=" * 80)
     print("SURFACE ALBEDO EFFECTS ON RADIATION")
     print("=" * 80)
-    print(f"\nSolar zenith angle: {args.sza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
     print(f"Wavelength: {args.wavelength * 1000:.0f} nm")
 
     mu0 = np.cos(np.radians(args.sza))
@@ -130,8 +130,8 @@ def main():
     print("-" * 80)
     print(f"\n{'Surface':<14} {'Albedo':>8} {'Direct':>10} {'Diffuse':>10} "
           f"{'Absorbed':>10} {'Reflected':>10} {'TOA Up':>10}")
-    print(f"{'':14} {'':>8} {'(W/m²)':>10} {'(W/m²)':>10} "
-          f"{'(W/m²)':>10} {'(W/m²)':>10} {'(W/m²)':>10}")
+    print(f"{'':14} {'':>8} {'(W/m^2)':>10} {'(W/m^2)':>10} "
+          f"{'(W/m^2)':>10} {'(W/m^2)':>10} {'(W/m^2)':>10}")
     print("-" * 80)
 
     results = {}
@@ -172,7 +172,7 @@ def main():
     print("\n" + "-" * 80)
     print("EQUILIBRIUM TEMPERATURE ESTIMATES (simplified, no atmosphere)")
     print("-" * 80)
-    print(f"\n{'Surface':<14} {'Albedo':>8} {'Absorbed':>12} {'T_eq (K)':>10} {'T_eq (°C)':>10}")
+    print(f"\n{'Surface':<14} {'Albedo':>8} {'Absorbed':>12} {'T_eq (K)':>10} {'T_eq ( degC)':>10}")
     print("-" * 80)
 
     for name, res in results.items():
@@ -181,7 +181,7 @@ def main():
         absorbed = res["absorbed"]
         emissivity = SURFACE_TYPES[name]["emissivity"]
 
-        # T^4 = absorbed / (ε * σ)
+        # T^4 = absorbed / (epsilon * sigma)
         if absorbed > 0:
             T_eq = (absorbed / (emissivity * STEFAN_BOLTZMANN))**0.25
         else:
@@ -201,12 +201,12 @@ def main():
 The ice-albedo feedback is a key climate feedback mechanism:
 
 1. COMPARISON:
-   - Ocean absorbs: {ocean_absorbed:.1f} W/m²
-   - Fresh snow absorbs: {snow_absorbed:.1f} W/m²
-   - Difference: {ocean_absorbed - snow_absorbed:.1f} W/m² ({(ocean_absorbed/snow_absorbed - 1)*100:.0f}% more)
+   - Ocean absorbs: {ocean_absorbed:.1f} W/m^2
+   - Fresh snow absorbs: {snow_absorbed:.1f} W/m^2
+   - Difference: {ocean_absorbed - snow_absorbed:.1f} W/m^2 ({(ocean_absorbed/snow_absorbed - 1)*100:.0f}% more)
 
 2. POSITIVE FEEDBACK LOOP:
-   Warming → Ice melts → Lower albedo → More absorption → More warming
+   Warming -> Ice melts -> Lower albedo -> More absorption -> More warming
 
 3. ARCTIC AMPLIFICATION:
    This feedback makes polar regions warm faster than the global average.
@@ -227,9 +227,9 @@ The ice-albedo feedback is a key climate feedback mechanism:
     print(f"""
 Urban surfaces are darker than natural vegetation:
 
-   - Grassland absorbs: {grass_absorbed:.1f} W/m²
-   - Asphalt absorbs: {asphalt_absorbed:.1f} W/m²
-   - Extra absorption: {asphalt_absorbed - grass_absorbed:.1f} W/m² ({(asphalt_absorbed/grass_absorbed - 1)*100:.0f}% more)
+   - Grassland absorbs: {grass_absorbed:.1f} W/m^2
+   - Asphalt absorbs: {asphalt_absorbed:.1f} W/m^2
+   - Extra absorption: {asphalt_absorbed - grass_absorbed:.1f} W/m^2 ({(asphalt_absorbed/grass_absorbed - 1)*100:.0f}% more)
 
 This contributes to urban areas being warmer than surrounding countryside.
 "Cool roofs" and "cool pavement" use high-albedo materials to reduce this effect.
@@ -241,7 +241,7 @@ This contributes to urban areas being warmer than surrounding countryside.
             import matplotlib.pyplot as plt
 
             fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-            fig.suptitle(f'Surface Albedo Effects (SZA = {args.sza}°)',
+            fig.suptitle(f'Surface Albedo Effects (SZA = {args.sza} deg)',
                         fontsize=14, fontweight='bold')
 
             names = list(results.keys())
@@ -271,7 +271,7 @@ This contributes to urban areas being warmer than surrounding countryside.
                            color='blue', alpha=0.7)
 
             ax1.set_xlabel('Surface Type')
-            ax1.set_ylabel('Flux (W/m²)')
+            ax1.set_ylabel('Flux (W/m^2)')
             ax1.set_title('Absorbed vs Reflected Solar Radiation')
             ax1.set_xticks(x_pos)
             ax1.set_xticklabels(names, rotation=45, ha='right')
@@ -284,7 +284,7 @@ This contributes to urban areas being warmer than surrounding countryside.
                 ax2.scatter(albedos[i], absorbed[i], c=[colors[i]], s=200,
                            label=name, edgecolors='black', linewidths=1)
             ax2.set_xlabel('Surface Albedo')
-            ax2.set_ylabel('Absorbed Flux (W/m²)')
+            ax2.set_ylabel('Absorbed Flux (W/m^2)')
             ax2.set_title('Absorbed Radiation vs Albedo')
 
             # Add trend line
@@ -302,7 +302,7 @@ This contributes to urban areas being warmer than surrounding countryside.
                 ax3.barh(i, toa_up[i], color=colors[i], edgecolor='black')
             ax3.set_yticks(range(len(names)))
             ax3.set_yticklabels(names)
-            ax3.set_xlabel('TOA Upward Flux (W/m²)')
+            ax3.set_xlabel('TOA Upward Flux (W/m^2)')
             ax3.set_title('Reflected Radiation at Top of Atmosphere')
             ax3.grid(True, alpha=0.3, axis='x')
 
@@ -361,11 +361,11 @@ SURFACE ALBEDO AND CLIMATE:
    - Vegetation has high NIR reflectance (red edge)
 
 3. CLIMATE EFFECTS:
-   - Higher albedo → Less absorption → Cooler surface
-   - Lower albedo → More absorption → Warmer surface
+   - Higher albedo -> Less absorption -> Cooler surface
+   - Lower albedo -> More absorption -> Warmer surface
 
 4. GLOBAL AVERAGE:
-   - Earth's planetary albedo ≈ 0.30
+   - Earth's planetary albedo ~ 0.30
    - Clouds contribute significantly (~0.15)
    - Surface contributes (~0.15)
 

@@ -9,7 +9,7 @@ This example demonstrates how solar zenith angle affects:
 - Total downwelling flux at the surface
 
 The solar zenith angle (SZA) is the angle between the sun and the vertical.
-At SZA=0°, the sun is directly overhead; at SZA=90°, it's at the horizon.
+At SZA=0 deg, the sun is directly overhead; at SZA=90 deg, it's at the horizon.
 
 Usage:
     python 01_solar_zenith_angle_study.py
@@ -108,7 +108,7 @@ def main():
         print(f"Rayleigh optical depth: {tau_total:.4f}")
 
     # Solar angles to study
-    sza_values = np.arange(0, 90, 5)  # 0° to 85° in 5° steps
+    sza_values = np.arange(0, 90, 5)  # 0 deg to 85 deg in 5 deg steps
 
     # Results storage
     direct_flux = []
@@ -122,11 +122,11 @@ def main():
     g = np.zeros(n_layers)     # Isotropic scattering
 
     print("\n" + "-" * 70)
-    print(f"{'SZA (°)':>8} {'μ₀':>8} {'Direct':>12} {'Diffuse':>12} {'Total':>12} {'Reflected':>12}")
-    print(f"{'':>8} {'':>8} {'(W/m²)':>12} {'(W/m²)':>12} {'(W/m²)':>12} {'(W/m²)':>12}")
+    print(f"{'SZA ( deg)':>8} {'u0':>8} {'Direct':>12} {'Diffuse':>12} {'Total':>12} {'Reflected':>12}")
+    print(f"{'':>8} {'':>8} {'(W/m^2)':>12} {'(W/m^2)':>12} {'(W/m^2)':>12} {'(W/m^2)':>12}")
     print("-" * 70)
 
-    solar_flux = 1361.0  # W/m² (solar constant)
+    solar_flux = 1361.0  # W/m^2 (solar constant)
 
     for sza in sza_values:
         mu0 = np.cos(np.radians(sza))
@@ -169,16 +169,16 @@ def main():
     print("=" * 70)
 
     max_total_idx = np.argmax(total_flux)
-    print(f"\n1. Maximum surface flux: {total_flux[max_total_idx]:.1f} W/m² at SZA={sza_values[max_total_idx]}°")
+    print(f"\n1. Maximum surface flux: {total_flux[max_total_idx]:.1f} W/m^2 at SZA={sza_values[max_total_idx]} deg")
 
     if len(total_flux) > 0 and total_flux[0] > 0:
-        ratio_60 = total_flux[12] / total_flux[0] if total_flux[0] > 0 else 0  # SZA=60°
-        print(f"2. Flux at SZA=60° is {ratio_60*100:.1f}% of overhead sun flux")
+        ratio_60 = total_flux[12] / total_flux[0] if total_flux[0] > 0 else 0  # SZA=60 deg
+        print(f"2. Flux at SZA=60 deg is {ratio_60*100:.1f}% of overhead sun flux")
 
     diffuse_fraction = [d/(d+f) if (d+f) > 0 else 0
                         for d, f in zip(diffuse_flux, direct_flux)]
-    print(f"3. Diffuse fraction at SZA=0°: {diffuse_fraction[0]*100:.1f}%")
-    print(f"4. Diffuse fraction at SZA=80°: {diffuse_fraction[16]*100:.1f}%")
+    print(f"3. Diffuse fraction at SZA=0 deg: {diffuse_fraction[0]*100:.1f}%")
+    print(f"4. Diffuse fraction at SZA=80 deg: {diffuse_fraction[16]*100:.1f}%")
     print(f"\n   (Higher diffuse fraction at large SZA due to longer path length)")
 
     # Plotting
@@ -187,7 +187,7 @@ def main():
             import matplotlib.pyplot as plt
 
             fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-            fig.suptitle(f'Solar Zenith Angle Study (λ={args.wavelength*1000:.0f}nm, τ={tau_total:.3f})',
+            fig.suptitle(f'Solar Zenith Angle Study (lambda={args.wavelength*1000:.0f}nm, tau={tau_total:.3f})',
                         fontsize=14, fontweight='bold')
 
             # Plot 1: Flux components vs SZA
@@ -195,8 +195,8 @@ def main():
             ax1.plot(sza_values, direct_flux, 'b-', linewidth=2, label='Direct')
             ax1.plot(sza_values, diffuse_flux, 'g--', linewidth=2, label='Diffuse')
             ax1.plot(sza_values, total_flux, 'r-', linewidth=2, label='Total')
-            ax1.set_xlabel('Solar Zenith Angle (°)')
-            ax1.set_ylabel('Surface Flux (W/m²)')
+            ax1.set_xlabel('Solar Zenith Angle ( deg)')
+            ax1.set_ylabel('Surface Flux (W/m^2)')
             ax1.set_title('Surface Irradiance vs Solar Zenith Angle')
             ax1.legend()
             ax1.grid(True, alpha=0.3)
@@ -206,12 +206,12 @@ def main():
             ax2 = axes[0, 1]
             mu0_values = np.cos(np.radians(sza_values))
             ax2.plot(mu0_values, total_flux, 'ro-', linewidth=2, markersize=4)
-            ax2.set_xlabel('cos(SZA) = μ₀')
-            ax2.set_ylabel('Total Surface Flux (W/m²)')
+            ax2.set_xlabel('cos(SZA) = u0')
+            ax2.set_ylabel('Total Surface Flux (W/m^2)')
             ax2.set_title('Surface Flux vs cos(SZA)')
             ax2.grid(True, alpha=0.3)
 
-            # Add reference line for F = F₀ * μ₀ (no atmosphere)
+            # Add reference line for F = F_0 * u0 (no atmosphere)
             F_no_atm = solar_flux * mu0_values
             ax2.plot(mu0_values, F_no_atm, 'k--', alpha=0.5, label='No atmosphere')
             ax2.legend()
@@ -219,7 +219,7 @@ def main():
             # Plot 3: Diffuse fraction
             ax3 = axes[1, 0]
             ax3.plot(sza_values, [f*100 for f in diffuse_fraction], 'g-', linewidth=2)
-            ax3.set_xlabel('Solar Zenith Angle (°)')
+            ax3.set_xlabel('Solar Zenith Angle ( deg)')
             ax3.set_ylabel('Diffuse Fraction (%)')
             ax3.set_title('Fraction of Diffuse Radiation')
             ax3.grid(True, alpha=0.3)
@@ -229,8 +229,8 @@ def main():
             # Plot 4: Reflected flux
             ax4 = axes[1, 1]
             ax4.plot(sza_values, upward_flux, 'm-', linewidth=2)
-            ax4.set_xlabel('Solar Zenith Angle (°)')
-            ax4.set_ylabel('TOA Upward Flux (W/m²)')
+            ax4.set_xlabel('Solar Zenith Angle ( deg)')
+            ax4.set_ylabel('TOA Upward Flux (W/m^2)')
             ax4.set_title('Reflected Radiation at Top of Atmosphere')
             ax4.grid(True, alpha=0.3)
             ax4.set_xlim(0, 90)
@@ -258,8 +258,8 @@ As the solar zenith angle increases:
 3. COSINE EFFECT: Even without atmosphere, surface irradiance decreases
    as cos(SZA) because the same solar flux is spread over a larger area.
 
-4. AIR MASS: Optical air mass ≈ 1/cos(SZA). At SZA=60°, air mass=2;
-   at SZA=80°, air mass≈6. This dramatically increases attenuation.
+4. AIR MASS: Optical air mass ~ 1/cos(SZA). At SZA=60 deg, air mass=2;
+   at SZA=80 deg, air mass~6. This dramatically increases attenuation.
 """)
 
 
