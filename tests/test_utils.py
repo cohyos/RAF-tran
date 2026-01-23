@@ -94,7 +94,8 @@ class TestPlanckFunction:
         B = planck_function(wavelengths, T)
 
         # Integrate using trapezoidal rule
-        integral = np.trapz(B, wavelengths)
+        trapz_func = np.trapezoid if hasattr(np, 'trapezoid') else np.trapz
+        integral = trapz_func(B, wavelengths)
 
         # Expected: σT⁴/π
         expected = STEFAN_BOLTZMANN * T**4 / np.pi

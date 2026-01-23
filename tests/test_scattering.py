@@ -38,7 +38,8 @@ class TestRayleighScattering:
 
         # Integral over sphere should be 4π
         # P(cos θ) integrated over 4π: ∫∫ P sin θ dθ dφ = 2π ∫ P d(cos θ)
-        integral = 2 * np.pi * np.trapz(P, cos_theta)
+        trapz_func = np.trapezoid if hasattr(np, 'trapezoid') else np.trapz
+        integral = 2 * np.pi * trapz_func(P, cos_theta)
         assert np.isclose(integral, 4 * np.pi, rtol=0.01)
 
     def test_phase_function_forward_backward_symmetric(self):
@@ -167,7 +168,8 @@ class TestLognormalDistribution:
         n = lognormal_size_distribution(r, r_g, sigma_g, N_total)
 
         # Integrate using log spacing
-        integral = np.trapz(n, r)
+        trapz_func = np.trapezoid if hasattr(np, 'trapezoid') else np.trapz
+        integral = trapz_func(n, r)
         assert np.isclose(integral, N_total, rtol=0.05)
 
     def test_lognormal_peak_at_mode(self):

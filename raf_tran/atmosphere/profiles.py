@@ -318,12 +318,14 @@ class StandardAtmosphere(AtmosphereProfile):
         Get ozone volume mixing ratio.
 
         Chapman layer profile with peak around 22-25 km.
+        Calibrated to give ~300 DU total column.
         """
         altitude = np.asarray(altitude)
         # Simplified ozone profile (Chapman layer approximation)
+        # Parameters tuned to give ~300 DU total column ozone
         peak_altitude = 23000.0  # m
-        peak_vmr = 8e-6  # ~8 ppm at peak
-        width = 8000.0  # m
+        peak_vmr = 8e-6  # ~8 ppmv at peak
+        width = 3200.0  # m (tuned to give ~300 DU column)
 
         return peak_vmr * np.exp(-((altitude - peak_altitude) ** 2) / (2 * width**2))
 

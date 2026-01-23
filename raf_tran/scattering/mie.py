@@ -68,19 +68,32 @@ def mie_coefficients(
         D[n] = (n + 1) / mx - 1.0 / (D[n + 1] + (n + 1) / mx)
 
     # Riccati-Bessel functions using upward recurrence
-    psi_nm1 = np.cos(x)
-    psi_n = np.sin(x)
-    chi_nm1 = -np.sin(x)
-    chi_n = np.cos(x)
+    # Standard definitions (Bohren & Huffman):
+    # ψ_n(x) = x·j_n(x) where j_n is spherical Bessel function
+    # χ_n(x) = -x·y_n(x) where y_n is spherical Neumann function
+    # ξ_n(x) = ψ_n(x) + i·χ_n(x) = x·h_n^(1)(x) where h_n^(1) is spherical Hankel
+    #
+    # Initial values:
+    # ψ_{-1}(x) = cos(x), ψ_0(x) = sin(x)
+    # χ_{-1}(x) = -sin(x), χ_0(x) = cos(x)
+    #
+    # Recurrence: f_{n+1} = (2n+1)/x · f_n - f_{n-1}
 
-    xi_nm1 = psi_nm1 - 1j * chi_nm1
-    xi_n = psi_n - 1j * chi_n
+    psi_nm2 = np.cos(x)   # ψ_{-1}
+    psi_nm1 = np.sin(x)   # ψ_0
+    psi_n = (1.0 / x) * psi_nm1 - psi_nm2  # ψ_1 = (1/x)·ψ_0 - ψ_{-1}
+
+    chi_nm2 = -np.sin(x)  # χ_{-1}
+    chi_nm1 = np.cos(x)   # χ_0
+    chi_n = (1.0 / x) * chi_nm1 - chi_nm2  # χ_1
+
+    xi_nm1 = psi_nm1 - 1j * chi_nm1  # ξ_0 = ψ_0 - i·χ_0
+    xi_n = psi_n - 1j * chi_n        # ξ_1 = ψ_1 - i·χ_1
 
     for n in range(1, n_terms + 1):
-        # Update Riccati-Bessel functions
-        psi_np1 = (2 * n + 1) / x * psi_n - psi_nm1
-        chi_np1 = (2 * n + 1) / x * chi_n - chi_nm1
-        xi_np1 = psi_np1 - 1j * chi_np1
+        # At this point:
+        # psi_nm1 = ψ_{n-1}, psi_n = ψ_n
+        # xi_nm1 = ξ_{n-1}, xi_n = ξ_n
 
         # Mie coefficients
         D_n = D[n]
@@ -90,6 +103,11 @@ def mie_coefficients(
         b_n[n - 1] = (
             (m * D_n + n / x) * psi_n - psi_nm1
         ) / ((m * D_n + n / x) * xi_n - xi_nm1)
+
+        # Update Riccati-Bessel functions for next iteration
+        psi_np1 = (2 * n + 1) / x * psi_n - psi_nm1
+        chi_np1 = (2 * n + 1) / x * chi_n - chi_nm1
+        xi_np1 = psi_np1 - 1j * chi_np1
 
         # Shift for next iteration
         psi_nm1 = psi_n
@@ -140,6 +158,11 @@ def mie_efficiencies(
 
     # Absorption efficiency
     Q_abs = Q_ext - Q_sca
+
+    # Ensure non-negative efficiencies (numerical precision floor)
+    Q_ext = max(0.0, Q_ext)
+    Q_sca = max(0.0, Q_sca)
+    Q_abs = max(0.0, Q_abs)
 
     # Asymmetry parameter
     n_max = len(a_n)

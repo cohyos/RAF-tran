@@ -163,56 +163,69 @@ class TwoStreamSolver:
 
         # Surface boundary condition
         surface_emission = surface_emissivity * STEFAN_BOLTZMANN * surface_temperature**4
-        flux_up[-1] = surface_emission
 
-        # Layer Planck emissions
-        B = STEFAN_BOLTZMANN * temperature**4 / np.pi  # Planck function
+        # Layer Planck emissions (blackbody flux = σT⁴)
+        B_flux = STEFAN_BOLTZMANN * temperature**4
 
-        # Solve layer by layer from bottom to top for upward flux
-        for i in range(n_layers - 1, -1, -1):
-            gamma1, gamma2 = self._get_two_stream_coefficients(omega[i], g[i])
-
-            # Transmission and reflection coefficients
-            k = np.sqrt(gamma1**2 - gamma2**2)
-
-            if tau[i] < 1e-6:
-                # Optically thin limit
-                t_layer = 1 - tau[i] * gamma1
-                r_layer = tau[i] * gamma2
-            else:
-                exp_k_tau = np.exp(-k * tau[i])
-                denom = (k + gamma1) + (k - gamma1) * exp_k_tau**2
-
-                t_layer = 2 * k * exp_k_tau / denom
-                r_layer = (k - gamma1) * (1 - exp_k_tau**2) / denom
-
-            # Layer thermal emission contribution
-            emission = (1 - omega[i]) * B[i] * np.pi
-
-            # Update fluxes
-            flux_up[i] = t_layer * flux_up[i + 1] + r_layer * flux_down[i] + emission
-
-        # Solve layer by layer from top to bottom for downward flux
-        flux_down[0] = 0  # No incoming thermal radiation at TOA
+        # Precompute layer transmission, reflection, and emission coefficients
+        t_layer = np.zeros(n_layers)
+        r_layer = np.zeros(n_layers)
+        emission = np.zeros(n_layers)
 
         for i in range(n_layers):
             gamma1, gamma2 = self._get_two_stream_coefficients(omega[i], g[i])
-
-            k = np.sqrt(gamma1**2 - gamma2**2)
+            k = np.sqrt(max(gamma1**2 - gamma2**2, 1e-12))
 
             if tau[i] < 1e-6:
-                t_layer = 1 - tau[i] * gamma1
-                r_layer = tau[i] * gamma2
+                # Optically thin limit
+                t_layer[i] = 1 - tau[i] * gamma1
+                r_layer[i] = tau[i] * gamma2
             else:
                 exp_k_tau = np.exp(-k * tau[i])
                 denom = (k + gamma1) + (k - gamma1) * exp_k_tau**2
 
-                t_layer = 2 * k * exp_k_tau / denom
-                r_layer = (k - gamma1) * (1 - exp_k_tau**2) / denom
+                t_layer[i] = 2 * k * exp_k_tau / denom
+                r_layer[i] = (k - gamma1) * (1 - exp_k_tau**2) / denom
 
-            emission = (1 - omega[i]) * B[i] * np.pi
+            # Thermal emission: what's absorbed must be emitted (Kirchhoff's law)
+            # For each direction, emission = (1 - t - r) * B_flux
+            # This ensures energy conservation: absorbed = emitted
+            absorption = 1 - t_layer[i] - r_layer[i]
+            emission[i] = absorption * B_flux[i]
 
-            flux_down[i + 1] = t_layer * flux_down[i] + r_layer * flux_up[i + 1] + emission
+        # Iterative solution for coupled up/down fluxes
+        flux_up[-1] = surface_emission
+
+        for iteration in range(20):  # Usually converges in <10 iterations
+            flux_up_old = flux_up.copy()
+
+            # Upward pass: bottom to top
+            for i in range(n_layers - 1, -1, -1):
+                flux_up[i] = (
+                    t_layer[i] * flux_up[i + 1]
+                    + r_layer[i] * flux_down[i]
+                    + emission[i]
+                )
+
+            # Downward pass: top to bottom
+            flux_down[0] = 0  # No incoming thermal radiation at TOA
+            for i in range(n_layers):
+                flux_down[i + 1] = (
+                    t_layer[i] * flux_down[i]
+                    + r_layer[i] * flux_up[i + 1]
+                    + emission[i]
+                )
+
+            # Update surface reflection (for non-unity emissivity)
+            if surface_emissivity < 1.0:
+                flux_up[-1] = (
+                    surface_emission
+                    + (1 - surface_emissivity) * flux_down[-1]
+                )
+
+            # Check for convergence
+            if np.max(np.abs(flux_up - flux_up_old)) < 1e-6:
+                break
 
         return TwoStreamResult(
             flux_up=flux_up,
