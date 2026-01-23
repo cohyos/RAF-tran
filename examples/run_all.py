@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""
+Run All Examples
+================
+
+This script runs all RAF-tran examples sequentially.
+
+Usage:
+    python run_all.py              # Run all examples
+    python run_all.py --no-plot    # Run without generating plots
+    python run_all.py --list       # List available examples
+"""
+
+import argparse
+import subprocess
+import sys
+import os
+from pathlib import Path
+
+
+EXAMPLES = [
+    ("01_solar_zenith_angle_study.py", "Solar Zenith Angle Effects"),
+    ("02_spectral_transmission.py", "Spectral Transmission (Sky Color)"),
+    ("03_aerosol_types_comparison.py", "Aerosol Types Comparison"),
+    ("04_atmospheric_profiles.py", "Atmospheric Profiles"),
+    ("05_greenhouse_effect.py", "Greenhouse Effect"),
+    ("06_surface_albedo_effects.py", "Surface Albedo Effects"),
+    ("07_cloud_radiative_effects.py", "Cloud Radiative Effects"),
+    ("08_ozone_uv_absorption.py", "Ozone UV Absorption"),
+    ("09_radiative_heating_rates.py", "Radiative Heating Rates"),
+    ("10_satellite_observation.py", "Satellite Observation Simulation"),
+]
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run all RAF-tran examples",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--no-plot", action="store_true",
+        help="Disable plot generation for all examples"
+    )
+    parser.add_argument(
+        "--list", action="store_true",
+        help="List available examples without running them"
+    )
+    parser.add_argument(
+        "--example", type=int, nargs="+",
+        help="Run specific example(s) by number (e.g., --example 1 5 10)"
+    )
+    parser.add_argument(
+        "--pause", action="store_true",
+        help="Pause between examples (press Enter to continue)"
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    # Change to examples directory
+    script_dir = Path(__file__).parent
+    os.chdir(script_dir)
+
+    if args.list:
+        print("=" * 60)
+        print("AVAILABLE RAF-TRAN EXAMPLES")
+        print("=" * 60)
+        for filename, description in EXAMPLES:
+            num = filename.split("_")[0]
+            print(f"  {num}: {description}")
+            print(f"       {filename}")
+        print("=" * 60)
+        return
+
+    # Filter examples if specific ones requested
+    if args.example:
+        selected = []
+        for num in args.example:
+            if 1 <= num <= len(EXAMPLES):
+                selected.append(EXAMPLES[num - 1])
+            else:
+                print(f"Warning: Example {num} not found (valid: 1-{len(EXAMPLES)})")
+        examples_to_run = selected
+    else:
+        examples_to_run = EXAMPLES
+
+    if not examples_to_run:
+        print("No examples to run!")
+        return
+
+    print("=" * 70)
+    print("RAF-TRAN EXAMPLES RUNNER")
+    print("=" * 70)
+    print(f"Running {len(examples_to_run)} example(s)...")
+    if args.no_plot:
+        print("(Plot generation disabled)")
+    print()
+
+    results = []
+
+    for i, (filename, description) in enumerate(examples_to_run, 1):
+        print("\n" + "=" * 70)
+        print(f"[{i}/{len(examples_to_run)}] {description}")
+        print(f"    Running: {filename}")
+        print("=" * 70 + "\n")
+
+        # Build command
+        cmd = [sys.executable, filename]
+        if args.no_plot:
+            cmd.append("--no-plot")
+
+        try:
+            result = subprocess.run(cmd, check=False)
+            success = result.returncode == 0
+            results.append((filename, success))
+
+            if success:
+                print(f"\n✓ {filename} completed successfully")
+            else:
+                print(f"\n✗ {filename} exited with code {result.returncode}")
+
+        except Exception as e:
+            print(f"\n✗ {filename} failed: {e}")
+            results.append((filename, False))
+
+        if args.pause and i < len(examples_to_run):
+            input("\nPress Enter to continue to next example...")
+
+    # Summary
+    print("\n" + "=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+
+    passed = sum(1 for _, success in results if success)
+    failed = len(results) - passed
+
+    for filename, success in results:
+        status = "✓ PASS" if success else "✗ FAIL"
+        print(f"  {status}  {filename}")
+
+    print("-" * 70)
+    print(f"Total: {passed} passed, {failed} failed out of {len(results)}")
+    print("=" * 70)
+
+    # List generated plots
+    plots = list(Path(".").glob("*.png"))
+    if plots:
+        print(f"\nGenerated {len(plots)} plot(s):")
+        for p in sorted(plots):
+            print(f"  - {p}")
+
+
+if __name__ == "__main__":
+    main()
