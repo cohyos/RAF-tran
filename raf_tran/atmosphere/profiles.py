@@ -370,13 +370,16 @@ class MidlatitudeSummer(AtmosphereProfile):
         ]
     )
 
+    # Scale factor to achieve realistic ~320 DU total column ozone
+    _O3_SCALE = 0.337
+
     def __init__(self):
         """Initialize midlatitude summer atmosphere."""
         self._z = self._DATA[:, 0] * 1000  # km to m
         self._T = self._DATA[:, 1]
         self._P = self._DATA[:, 2] * 100  # mbar to Pa
         self._h2o = self._DATA[:, 3] * 1e-6  # ppmv to vmr
-        self._o3 = self._DATA[:, 4] * 1e-6  # ppmv to vmr
+        self._o3 = self._DATA[:, 4] * 1e-6 * self._O3_SCALE  # ppmv to vmr, scaled
 
     def temperature(self, altitude: np.ndarray) -> np.ndarray:
         """Get temperature at given altitudes."""
@@ -435,13 +438,16 @@ class MidlatitudeWinter(AtmosphereProfile):
         ]
     )
 
+    # Scale factor to achieve realistic ~380 DU total column ozone
+    _O3_SCALE = 0.517
+
     def __init__(self):
         """Initialize midlatitude winter atmosphere."""
         self._z = self._DATA[:, 0] * 1000
         self._T = self._DATA[:, 1]
         self._P = self._DATA[:, 2] * 100
         self._h2o = self._DATA[:, 3] * 1e-6
-        self._o3 = self._DATA[:, 4] * 1e-6
+        self._o3 = self._DATA[:, 4] * 1e-6 * self._O3_SCALE
 
     def temperature(self, altitude: np.ndarray) -> np.ndarray:
         return np.interp(np.asarray(altitude), self._z, self._T)
@@ -495,13 +501,16 @@ class TropicalAtmosphere(AtmosphereProfile):
         ]
     )
 
+    # Scale factor to achieve realistic ~270 DU total column ozone
+    _O3_SCALE = 0.273
+
     def __init__(self):
         """Initialize tropical atmosphere."""
         self._z = self._DATA[:, 0] * 1000
         self._T = self._DATA[:, 1]
         self._P = self._DATA[:, 2] * 100
         self._h2o = self._DATA[:, 3] * 1e-6
-        self._o3 = self._DATA[:, 4] * 1e-6
+        self._o3 = self._DATA[:, 4] * 1e-6 * self._O3_SCALE
 
     def temperature(self, altitude: np.ndarray) -> np.ndarray:
         return np.interp(np.asarray(altitude), self._z, self._T)
@@ -551,12 +560,15 @@ class SubarcticSummer(AtmosphereProfile):
         ]
     )
 
+    # Scale factor to achieve realistic ~350 DU total column ozone
+    _O3_SCALE = 0.490
+
     def __init__(self):
         self._z = self._DATA[:, 0] * 1000
         self._T = self._DATA[:, 1]
         self._P = self._DATA[:, 2] * 100
         self._h2o = self._DATA[:, 3] * 1e-6
-        self._o3 = self._DATA[:, 4] * 1e-6
+        self._o3 = self._DATA[:, 4] * 1e-6 * self._O3_SCALE
 
     def temperature(self, altitude: np.ndarray) -> np.ndarray:
         return np.interp(np.asarray(altitude), self._z, self._T)
@@ -606,12 +618,15 @@ class SubarcticWinter(AtmosphereProfile):
         ]
     )
 
+    # Scale factor to achieve realistic ~400 DU total column ozone
+    _O3_SCALE = 0.560
+
     def __init__(self):
         self._z = self._DATA[:, 0] * 1000
         self._T = self._DATA[:, 1]
         self._P = self._DATA[:, 2] * 100
         self._h2o = self._DATA[:, 3] * 1e-6
-        self._o3 = self._DATA[:, 4] * 1e-6
+        self._o3 = self._DATA[:, 4] * 1e-6 * self._O3_SCALE
 
     def temperature(self, altitude: np.ndarray) -> np.ndarray:
         return np.interp(np.asarray(altitude), self._z, self._T)
