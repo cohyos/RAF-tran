@@ -193,7 +193,7 @@ Single Scattering Albedo (SSA) determines aerosol climate effect:
     print(f"\n{'Aerosol':<16}", end="")
     for wl in wavelengths:
         print(f" tau_{int(wl*1000):>4}nm", end="")
-    print("  Ångström")
+    print("  Angstrom")
     print("-" * 70)
 
     for name, props in AEROSOL_TYPES.items():
@@ -204,10 +204,10 @@ Single Scattering Albedo (SSA) determines aerosol climate effect:
         for wl in wavelengths:
             x = 2 * np.pi * r / wl
             Q_ext, _, _, _ = mie_efficiencies(x, m)
-            # Optical depth ∝ Q_ext for fixed particle density
+            # Optical depth ~ Q_ext for fixed particle density
             tau_values.append(Q_ext)
 
-        # Calculate Ångström exponent: tau ∝ lambda^(-alpha)
+        # Calculate Angstrom exponent: tau ~ lambda^(-alpha)
         log_wl = np.log(wavelengths)
         log_tau = np.log(np.array(tau_values))
         alpha = -np.polyfit(log_wl, log_tau, 1)[0]
@@ -218,7 +218,7 @@ Single Scattering Albedo (SSA) determines aerosol climate effect:
         print(f"  {alpha:>6.2f}")
 
     print("""
-Ångström exponent (alpha):
+Angstrom exponent (alpha):
   alpha > 1.5  : Small particles (pollution, smoke)
   alpha ~ 1.0  : Mixed aerosols
   alpha < 0.5  : Large particles (dust, sea salt)
@@ -341,7 +341,7 @@ AEROSOL RADIATIVE EFFECTS:
 
 2. PARTICLE SIZE EFFECTS:
    - Size parameter x = 2pir/lambda determines scattering regime
-   - x << 1: Rayleigh regime (sigma ∝ r⁶)
+   - x << 1: Rayleigh regime (sigma ~ r^6)
    - x ~ 1: Mie regime (strong size dependence)
    - x >> 1: Geometric optics (Q_ext -> 2)
 

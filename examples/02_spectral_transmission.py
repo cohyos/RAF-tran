@@ -7,7 +7,7 @@ This example calculates the atmospheric transmission spectrum
 from UV to near-infrared wavelengths, showing how Rayleigh
 scattering causes the blue color of the sky.
 
-The strong wavelength dependence (lambda⁻^4) of Rayleigh scattering
+The strong wavelength dependence (lambda-^4) of Rayleigh scattering
 means shorter (blue) wavelengths are scattered much more than
 longer (red) wavelengths.
 
@@ -175,12 +175,12 @@ def main():
     idx_red = np.argmin(np.abs(wavelengths - 0.65))
 
     tau_ratio = tau_vertical[idx_blue] / tau_vertical[idx_red]
-    scatter_ratio = (0.65 / 0.45) ** 4  # lambda⁻^4 dependence
+    scatter_ratio = (0.65 / 0.45) ** 4  # lambda-^4 dependence
 
     print("\n" + "-" * 70)
     print("WHY IS THE SKY BLUE?")
     print("-" * 70)
-    print(f"\nRayleigh scattering cross-section ∝ lambda⁻^4")
+    print(f"\nRayleigh scattering cross-section ~ lambda-^4")
     print(f"\nBlue (450nm) vs Red (650nm):")
     print(f"  Theoretical ratio: (650/450)^4 = {scatter_ratio:.2f}")
     print(f"  Calculated tau ratio: {tau_ratio:.2f}")
@@ -228,12 +228,12 @@ def main():
             ax2.legend()
             ax2.grid(True, alpha=0.3)
 
-            # Verify lambda⁻^4 dependence
+            # Verify lambda-^4 dependence
             wl_ref = 0.55
             tau_ref = tau_vertical[np.argmin(np.abs(wavelengths - wl_ref))]
             tau_theory = tau_ref * (wl_ref / wavelengths) ** 4
             ax2.semilogy(wavelengths * 1000, tau_theory, 'g:', linewidth=1,
-                        label='lambda⁻^4 fit', alpha=0.7)
+                        label='lambda-^4 fit', alpha=0.7)
             ax2.legend()
 
             # Plot 3: Scattering coefficient vs wavelength
@@ -281,7 +281,7 @@ def main():
     print("""
 RAYLEIGH SCATTERING AND SKY COLOR:
 
-1. WAVELENGTH DEPENDENCE: Rayleigh scattering cross-section sigma ∝ lambda⁻^4
+1. WAVELENGTH DEPENDENCE: Rayleigh scattering cross-section sigma ~ lambda-^4
    - Blue light (450nm) scatters ~5x more than red light (650nm)
    - This selective scattering creates the blue sky
 

@@ -299,7 +299,7 @@ def main():
         plot_path = find_plot_for_example(filename, script_dir)
 
         status = "[OK]" if success else "[X]"
-        plot_status = "📊" if plot_path else "  "
+        plot_status = "" if plot_path else "  "
         print(f"{status} {plot_status}")
 
         results.append((filename, description, output, success, plot_path))

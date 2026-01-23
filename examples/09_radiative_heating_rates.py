@@ -46,7 +46,7 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Heating rate calculation:
-  dT/dt = -g/cp × dF_net/dp
+  dT/dt = -g/cp * dF_net/dp
 
 where:
   g = gravitational acceleration
@@ -88,7 +88,7 @@ def calculate_heating_rate(flux_up, flux_down, flux_direct, pressure, cp=1004.0)
     """
     Calculate heating rate from flux divergence.
 
-    dT/dt = -g/cp × dF_net/dp
+    dT/dt = -g/cp * dF_net/dp
 
     Parameters
     ----------
@@ -115,7 +115,7 @@ def calculate_heating_rate(flux_up, flux_down, flux_direct, pressure, cp=1004.0)
     d_flux = np.diff(flux_net)
     d_pressure = np.diff(pressure)
 
-    # Heating rate: dT/dt = -g/cp × dF/dp
+    # Heating rate: dT/dt = -g/cp * dF/dp
     heating_rate = -EARTH_SURFACE_GRAVITY / cp * d_flux / d_pressure
 
     # Convert K/s to K/day
@@ -205,7 +205,7 @@ def main():
     sw_absorbed_surface = (1 - 0.15) * (result_sw.flux_direct[-1] + result_sw.flux_down[-1])
     sw_absorbed_atm = SOLAR_CONSTANT * mu0 - result_sw.flux_up[0] - sw_absorbed_surface
 
-    print(f"\nSolar constant × u0: {SOLAR_CONSTANT * mu0:.1f} W/m^2")
+    print(f"\nSolar constant * u0: {SOLAR_CONSTANT * mu0:.1f} W/m^2")
     print(f"Reflected at TOA: {result_sw.flux_up[0]:.1f} W/m^2")
     print(f"Absorbed by surface: {sw_absorbed_surface:.1f} W/m^2")
     print(f"Absorbed by atmosphere: {sw_absorbed_atm:.1f} W/m^2")
@@ -401,7 +401,7 @@ RADIATIVE HEATING IN THE ATMOSPHERE:
    - Net cooling because emission > absorption from below
 
 3. HEATING RATE FORMULA:
-   dT/dt = -g/cp × dF_net/dp
+   dT/dt = -g/cp * dF_net/dp
    where F_net = F_down - F_up (positive downward)
 
 4. TYPICAL VALUES:

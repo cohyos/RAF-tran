@@ -169,8 +169,8 @@ def main():
     print("=" * 80)
     print(f"""
 Energy Balance:
-  Absorbed solar = (1 - albedo) × S_0/4
-                 = (1 - {args.albedo}) × {args.solar}/4
+  Absorbed solar = (1 - albedo) * S_0/4
+                 = (1 - {args.albedo}) * {args.solar}/4
                  = {absorbed_solar:.1f} W/m^2
 
   At equilibrium: Absorbed = Emitted
@@ -191,8 +191,8 @@ The difference ({288 - T_eff:.0f} K) is the GREENHOUSE EFFECT.
     print(f"""
 With a single absorbing layer at optical depth tau = {args.tau}:
 
-  T_surface = T_eff × (1 + tau/2)^0.25
-            = {T_eff:.1f} × (1 + {args.tau}/2)^0.25
+  T_surface = T_eff * (1 + tau/2)^0.25
+            = {T_eff:.1f} * (1 + {args.tau}/2)^0.25
             = {T_simple:.1f} K ({T_simple - 273.15:.1f} degC)
 
 Greenhouse warming = {T_simple - T_eff:.1f} K
@@ -355,7 +355,7 @@ THE GREENHOUSE EFFECT:
 2. ATMOSPHERIC ABSORPTION:
    - Atmosphere is transparent to solar radiation
    - Atmosphere ABSORBS infrared (thermal) radiation
-   - Main absorbers: H_2O, CO_2, CH₄, N_2O, O_3
+   - Main absorbers: H_2O, CO_2, CH_4, N_2O, O_3
 
 3. THE WARMING MECHANISM:
    - Surface emits IR upward

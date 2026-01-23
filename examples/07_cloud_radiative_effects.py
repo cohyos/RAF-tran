@@ -248,7 +248,7 @@ def calculate_cre(solver, z_levels, z_mid, dz, temperature, pressure,
     # Calculate CRE
     # CRE_SW = (SW_absorbed)_cloudy - (SW_absorbed)_clear
     #        = (SW_down - SW_up)_cloudy - (SW_down - SW_up)_clear at TOA
-    # Simplify: CRE_SW = -ΔSW_up_TOA (negative because more reflection = cooling)
+    # Simplify: CRE_SW = -DeltaSW_up_TOA (negative because more reflection = cooling)
     cre_sw = -(sw_up_toa_cloudy - sw_up_toa_clear)  # Negative = cooling
 
     # CRE_LW = OLR_clear - OLR_cloudy (less OLR = warming)

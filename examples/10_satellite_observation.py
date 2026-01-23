@@ -54,18 +54,18 @@ SATELLITE_CHANNELS = {
         "description": "Near-IR - vegetation, clouds"
     },
     "IR Window (11 um)": {
-        "center_wn": 909,  # cm⁻¹
+        "center_wn": 909,  # cm-^-1
         "type": "thermal",
         "description": "IR window - surface/cloud temperature"
     },
     "Water Vapor (6.7 um)": {
-        "center_wn": 1493,  # cm⁻¹
+        "center_wn": 1493,  # cm-^-1
         "type": "thermal",
         "tau_wv_scale": 5.0,  # Strong water vapor absorption
         "description": "WV channel - upper tropospheric humidity"
     },
     "CO2 (15 um)": {
-        "center_wn": 667,  # cm⁻¹
+        "center_wn": 667,  # cm-^-1
         "type": "thermal",
         "tau_co2": 50.0,  # Very optically thick
         "description": "CO2 band - stratospheric temperature"
@@ -150,9 +150,9 @@ def brightness_temperature(radiance, wavenumber):
     Parameters
     ----------
     radiance : float
-        Radiance in W/m^2/sr/cm⁻¹
+        Radiance in W/m^2/sr/cm-^-1
     wavenumber : float
-        Wavenumber in cm⁻¹
+        Wavenumber in cm-^-1
 
     Returns
     -------
@@ -161,8 +161,8 @@ def brightness_temperature(radiance, wavenumber):
     """
     from raf_tran.utils.constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, BOLTZMANN_CONSTANT
 
-    # Convert wavenumber to m⁻¹
-    nu = wavenumber * 100  # cm⁻¹ to m⁻¹
+    # Convert wavenumber to m-^-1
+    nu = wavenumber * 100  # cm-^-1 to m-^-1
 
     c1 = 2 * PLANCK_CONSTANT * SPEED_OF_LIGHT**2
     c2 = PLANCK_CONSTANT * SPEED_OF_LIGHT / BOLTZMANN_CONSTANT
@@ -171,8 +171,8 @@ def brightness_temperature(radiance, wavenumber):
     # B = c1 * nu^3 / (exp(c2*nu/T) - 1)
     # T = c2 * nu / ln(1 + c1*nu^3/B)
 
-    # Convert radiance from W/m^2/sr/cm⁻¹ to W/m^2/sr/m⁻¹
-    B = radiance / 100  # W/m^2/sr/m⁻¹
+    # Convert radiance from W/m^2/sr/cm-^-1 to W/m^2/sr/m-^-1
+    B = radiance / 100  # W/m^2/sr/m-^-1
 
     if B <= 0:
         return 0.0
@@ -376,7 +376,7 @@ CLOUD DETECTION:
   - VIS channel shows high reflectance ({results['VIS (0.65 um)']['value']:.0f}%) due to clouds
   - IR Window shows cold brightness temp ({results['IR Window (11 um)']['value']:.0f} K)
     indicating cloud-top at ~{args.cloud_height/1000:.1f} km
-  - Cloud-top temp ({T_cloud:.0f} K) vs surface ({T_surface:.0f} K): Δ={T_surface-T_cloud:.0f} K
+  - Cloud-top temp ({T_cloud:.0f} K) vs surface ({T_surface:.0f} K): Delta={T_surface-T_cloud:.0f} K
 """)
     else:
         print(f"""
