@@ -242,14 +242,16 @@ def main():
     print("RELATIVE UV-B INCREASE WITH OZONE DEPLETION:")
     print("-" * 60)
 
-    # Mean UV-B (280-315 nm)
+    # Mean UV-B transmission (280-315 nm)
+    # IMPORTANT: Compute transmission at each wavelength FIRST, then average
+    # (NOT: compute mean cross-section then transmission - that's wrong!)
     uvb_mask = (wavelengths >= 280) & (wavelengths <= 315)
     uvb_sigma = sigma_o3[uvb_mask]
-    uvb_mean_sigma = np.mean(uvb_sigma)
 
-    trans_normal = np.mean(np.exp(-uvb_mean_sigma * 300 * DU_factor / mu0))
-    trans_depleted = np.mean(np.exp(-uvb_mean_sigma * 200 * DU_factor / mu0))
-    trans_hole = np.mean(np.exp(-uvb_mean_sigma * 100 * DU_factor / mu0))
+    # Transmission at each UV-B wavelength for different ozone columns
+    trans_normal = np.mean(np.exp(-uvb_sigma * 300 * DU_factor / mu0))
+    trans_depleted = np.mean(np.exp(-uvb_sigma * 200 * DU_factor / mu0))
+    trans_hole = np.mean(np.exp(-uvb_sigma * 100 * DU_factor / mu0))
 
     print(f"  300 DU -> 200 DU: UV-B increases by {(trans_depleted/trans_normal - 1)*100:+.0f}%")
     print(f"  300 DU -> 100 DU: UV-B increases by {(trans_hole/trans_normal - 1)*100:+.0f}%")

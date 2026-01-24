@@ -198,14 +198,26 @@ Single Scattering Albedo (SSA) determines aerosol climate effect:
 
     for name, props in AEROSOL_TYPES.items():
         m = props["refractive_index"]
-        r = args.radius if args.radius else props["r_g"]
+        r_g = args.radius if args.radius else props["r_g"]
+        sigma_g = props["sigma_g"]
 
         tau_values = []
         for wl in wavelengths:
-            x = 2 * np.pi * r / wl
-            Q_ext, _, _, _ = mie_efficiencies(x, m)
-            # Optical depth ~ Q_ext for fixed particle density
-            tau_values.append(Q_ext)
+            # Average Q_ext over lognormal size distribution for realistic behavior
+            # This smooths out Mie resonance oscillations
+            n_sizes = 50
+            r_min = r_g * np.exp(-3 * np.log(sigma_g))
+            r_max = r_g * np.exp(3 * np.log(sigma_g))
+            radii = np.logspace(np.log10(r_min), np.log10(r_max), n_sizes)
+            weights = lognormal_size_distribution(radii, r_g, sigma_g)
+            weights = weights / np.sum(weights)  # Normalize
+
+            Q_ext_avg = 0.0
+            for r, w in zip(radii, weights):
+                x = 2 * np.pi * r / wl
+                Q_ext, _, _, _ = mie_efficiencies(x, m)
+                Q_ext_avg += Q_ext * w
+            tau_values.append(Q_ext_avg)
 
         # Calculate Angstrom exponent: tau ~ lambda^(-alpha)
         log_wl = np.log(wavelengths)
