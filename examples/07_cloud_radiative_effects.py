@@ -212,13 +212,13 @@ def calculate_cre(solver, z_levels, z_mid, dz, temperature, pressure,
         mu0=mu0, flux_toa=SOLAR_CONSTANT, surface_albedo=surface_albedo
     )
 
-    # SW at surface
-    sw_down_clear = result_sw_clear.flux_direct[-1] + result_sw_clear.flux_down[-1]
-    sw_down_cloudy = result_sw_cloudy.flux_direct[-1] + result_sw_cloudy.flux_down[-1]
+    # SW at surface (index 0 = surface, index -1 = TOA)
+    sw_down_clear = result_sw_clear.flux_direct[0] + result_sw_clear.flux_down[0]
+    sw_down_cloudy = result_sw_cloudy.flux_direct[0] + result_sw_cloudy.flux_down[0]
 
     # SW at TOA (upward = reflected)
-    sw_up_toa_clear = result_sw_clear.flux_up[0]
-    sw_up_toa_cloudy = result_sw_cloudy.flux_up[0]
+    sw_up_toa_clear = result_sw_clear.flux_up[-1]
+    sw_up_toa_cloudy = result_sw_cloudy.flux_up[-1]
 
     # LONGWAVE (Thermal) calculation
     # For LW, use optical depth scaled for IR absorption
@@ -237,13 +237,13 @@ def calculate_cre(solver, z_levels, z_mid, dz, temperature, pressure,
         temperature=temperature, surface_temperature=T_surface
     )
 
-    # LW at TOA (OLR)
-    olr_clear = result_lw_clear.flux_up[0]
-    olr_cloudy = result_lw_cloudy.flux_up[0]
+    # LW at TOA (OLR) - index -1 = TOA
+    olr_clear = result_lw_clear.flux_up[-1]
+    olr_cloudy = result_lw_cloudy.flux_up[-1]
 
-    # LW at surface (downward = backradiation)
-    lw_down_clear = result_lw_clear.flux_down[-1]
-    lw_down_cloudy = result_lw_cloudy.flux_down[-1]
+    # LW at surface (downward = backradiation) - index 0 = surface
+    lw_down_clear = result_lw_clear.flux_down[0]
+    lw_down_cloudy = result_lw_cloudy.flux_down[0]
 
     # Calculate CRE
     # CRE_SW = (SW_absorbed)_cloudy - (SW_absorbed)_clear

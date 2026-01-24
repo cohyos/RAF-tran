@@ -143,16 +143,44 @@ def get_surface_properties(surface_type):
     return properties.get(surface_type, properties["land"])
 
 
+def brightness_temperature_from_flux(flux, temperature_ref):
+    """
+    Estimate brightness temperature from thermal flux.
+
+    For a gray atmosphere, the brightness temperature is approximately
+    the temperature of the effective emitting level.
+
+    Parameters
+    ----------
+    flux : float
+        Upwelling thermal flux in W/m^2
+    temperature_ref : float
+        Reference temperature for the emitting surface/layer
+
+    Returns
+    -------
+    T_b : float
+        Brightness temperature in K
+    """
+    # For thermal emission, F = epsilon * sigma * T^4
+    # T_b = (F / sigma)^0.25 assumes unity emissivity
+    if flux <= 0:
+        return 0.0
+
+    T_b = (flux / STEFAN_BOLTZMANN)**0.25
+    return T_b
+
+
 def brightness_temperature(radiance, wavenumber):
     """
-    Convert radiance to brightness temperature using inverse Planck.
+    Convert spectral radiance to brightness temperature using inverse Planck.
 
     Parameters
     ----------
     radiance : float
-        Radiance in W/m^2/sr/cm-^-1
+        Spectral radiance in W/m^2/sr/cm^-1
     wavenumber : float
-        Wavenumber in cm-^-1
+        Wavenumber in cm^-1
 
     Returns
     -------
@@ -161,23 +189,19 @@ def brightness_temperature(radiance, wavenumber):
     """
     from raf_tran.utils.constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, BOLTZMANN_CONSTANT
 
-    # Convert wavenumber to m-^-1
-    nu = wavenumber * 100  # cm-^-1 to m-^-1
-
-    c1 = 2 * PLANCK_CONSTANT * SPEED_OF_LIGHT**2
-    c2 = PLANCK_CONSTANT * SPEED_OF_LIGHT / BOLTZMANN_CONSTANT
-
-    # Inverse Planck function
-    # B = c1 * nu^3 / (exp(c2*nu/T) - 1)
-    # T = c2 * nu / ln(1 + c1*nu^3/B)
-
-    # Convert radiance from W/m^2/sr/cm-^-1 to W/m^2/sr/m-^-1
-    B = radiance / 100  # W/m^2/sr/m-^-1
-
-    if B <= 0:
+    if radiance <= 0:
         return 0.0
 
-    T_b = c2 * nu / np.log(1 + c1 * nu**3 / B)
+    # Planck function in wavenumber form:
+    # B_nu = c1 * nu^3 / (exp(c2*nu/T) - 1)
+    # where c1 = 2*h*c^2 and c2 = h*c/k
+    # with nu in cm^-1, B_nu in W/m^2/sr/cm^-1
+
+    c1 = 1.191042e-5  # W/m^2/sr/(cm^-1)^4 - first radiation constant for wavenumber
+    c2 = 1.4387769    # cm*K - second radiation constant
+
+    # Inverse Planck: T = c2 * nu / ln(1 + c1*nu^3/B)
+    T_b = c2 * wavenumber / np.log(1 + c1 * wavenumber**3 / radiance)
     return T_b
 
 
@@ -259,8 +283,9 @@ def main():
                 surface_albedo=surface_albedo,
             )
 
-            # Reflectance = upward flux / incoming flux
-            reflectance_clear = result_clear.flux_up[0] / (SOLAR_CONSTANT * mu0)
+            # Reflectance = upward flux at TOA / incoming flux
+            # TOA = index -1
+            reflectance_clear = result_clear.flux_up[-1] / (SOLAR_CONSTANT * mu0)
 
             # Cloudy calculation
             if args.cloud_cover > 0:
@@ -282,7 +307,7 @@ def main():
                     flux_toa=SOLAR_CONSTANT,
                     surface_albedo=surface_albedo,
                 )
-                reflectance_cloudy = result_cloudy.flux_up[0] / (SOLAR_CONSTANT * mu0)
+                reflectance_cloudy = result_cloudy.flux_up[-1] / (SOLAR_CONSTANT * mu0)
 
                 # Weighted average
                 reflectance = (1 - args.cloud_cover) * reflectance_clear + args.cloud_cover * reflectance_cloudy
@@ -329,17 +354,29 @@ def main():
                 surface_emissivity=surface_props["emissivity"],
             )
 
-            # Convert to brightness temperature
-            radiance_clear = result_clear.flux_up[0] / np.pi  # Approximate radiance
-            T_b_clear = brightness_temperature(radiance_clear * 0.01, wavenumber)
+            # For window channels with low optical depth, T_b approximates surface T
+            # For opaque channels, T_b reflects effective emitting level temperature
+            tau_total = np.sum(tau_ir)
 
-            # For water vapor and CO2 channels, use weighting function approach
-            if "Water Vapor" in channel_name:
-                # WV channel sees upper troposphere
-                T_b_clear = np.mean(temperature[20:35])  # ~5-10 km
+            if "Window" in channel_name:
+                # IR window: atmosphere is mostly transparent
+                # T_b is close to surface temperature, slightly reduced by atmospheric absorption
+                transmission = np.exp(-tau_total / mu_view)
+                T_b_clear = T_surface * transmission + np.mean(temperature[:10]) * (1 - transmission)
+            elif "Water Vapor" in channel_name:
+                # WV channel sees upper troposphere where water vapor emission peaks
+                # Find effective emitting level (where tau from TOA ~ 1)
+                tau_cumsum = np.cumsum(tau_ir[::-1])[::-1]
+                eff_level = np.argmin(np.abs(tau_cumsum - 1.0))
+                T_b_clear = temperature[min(eff_level, n_layers-1)]
             elif "CO2" in channel_name:
-                # CO2 channel sees stratosphere
-                T_b_clear = np.mean(temperature[35:])  # Above 10 km
+                # CO2 channel is very opaque - sees high altitude (stratosphere)
+                # Effective emitting temperature near tropopause or above
+                T_b_clear = np.mean(temperature[-10:])  # Upper layers
+            else:
+                # Generic thermal channel
+                # TOA = index -1
+                T_b_clear = brightness_temperature_from_flux(result_clear.flux_up[-1], T_surface)
 
             # Cloudy calculation
             if args.cloud_cover > 0:

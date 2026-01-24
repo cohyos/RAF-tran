@@ -88,7 +88,7 @@ def calculate_heating_rate(flux_up, flux_down, flux_direct, pressure, cp=1004.0)
     """
     Calculate heating rate from flux divergence.
 
-    dT/dt = -g/cp * dF_net/dp
+    dT/dt = (absorbed flux) / (layer mass * cp)
 
     Parameters
     ----------
@@ -111,12 +111,24 @@ def calculate_heating_rate(flux_up, flux_down, flux_direct, pressure, cp=1004.0)
     # Net flux (positive downward)
     flux_net = flux_down + flux_direct - flux_up
 
-    # Flux divergence across each layer
-    d_flux = np.diff(flux_net)
-    d_pressure = np.diff(pressure)
+    n_layers = len(pressure) - 1
+    heating_rate = np.zeros(n_layers)
 
-    # Heating rate: dT/dt = -g/cp * dF/dp
-    heating_rate = -EARTH_SURFACE_GRAVITY / cp * d_flux / d_pressure
+    for i in range(n_layers):
+        # Energy absorbed by layer = flux in minus flux out
+        # Levels are ordered from surface (index 0) to TOA (index n)
+        # So pressure decreases with index
+        # Flux absorbed = (flux from above) - (flux going below)
+        # = flux_net[i+1] - flux_net[i]
+        flux_absorbed = flux_net[i+1] - flux_net[i]
+
+        # Mass of layer per unit area: dp/g
+        dp = abs(pressure[i+1] - pressure[i])
+        mass_per_area = dp / EARTH_SURFACE_GRAVITY
+
+        # Heating rate: dT/dt = absorbed_energy / (mass * cp)
+        if mass_per_area > 0:
+            heating_rate[i] = flux_absorbed / (mass_per_area * cp)
 
     # Convert K/s to K/day
     heating_rate *= 86400
@@ -202,11 +214,12 @@ def main():
         pressure_levels
     )
 
-    sw_absorbed_surface = (1 - 0.15) * (result_sw.flux_direct[-1] + result_sw.flux_down[-1])
-    sw_absorbed_atm = SOLAR_CONSTANT * mu0 - result_sw.flux_up[0] - sw_absorbed_surface
+    # Surface = index 0, TOA = index -1
+    sw_absorbed_surface = (1 - 0.15) * (result_sw.flux_direct[0] + result_sw.flux_down[0])
+    sw_absorbed_atm = SOLAR_CONSTANT * mu0 - result_sw.flux_up[-1] - sw_absorbed_surface
 
     print(f"\nSolar constant * u0: {SOLAR_CONSTANT * mu0:.1f} W/m^2")
-    print(f"Reflected at TOA: {result_sw.flux_up[0]:.1f} W/m^2")
+    print(f"Reflected at TOA: {result_sw.flux_up[-1]:.1f} W/m^2")
     print(f"Absorbed by surface: {sw_absorbed_surface:.1f} W/m^2")
     print(f"Absorbed by atmosphere: {sw_absorbed_atm:.1f} W/m^2")
     print(f"Max SW heating rate: {np.max(heating_sw):.2f} K/day at {z_mid[np.argmax(heating_sw)]/1000:.1f} km")
@@ -243,9 +256,9 @@ def main():
     )
 
     # LW is typically cooling (negative heating rate)
-    olr = result_lw.flux_up[0]
+    olr = result_lw.flux_up[-1]  # TOA = index -1
     surface_emission = STEFAN_BOLTZMANN * T_surface**4
-    backradiation = result_lw.flux_down[-1]
+    backradiation = result_lw.flux_down[0]  # Surface = index 0
 
     print(f"\nSurface emission: {surface_emission:.1f} W/m^2")
     print(f"Outgoing LW at TOA: {olr:.1f} W/m^2")

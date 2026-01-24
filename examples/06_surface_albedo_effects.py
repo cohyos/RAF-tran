@@ -148,12 +148,13 @@ def main():
             surface_albedo=albedo,
         )
 
-        direct = result.flux_direct[-1]
-        diffuse = result.flux_down[-1]
+        # Surface level = index 0, TOA = index -1
+        direct = result.flux_direct[0]
+        diffuse = result.flux_down[0]
         total_down = direct + diffuse
         reflected = albedo * total_down
         absorbed = (1 - albedo) * total_down
-        toa_up = result.flux_up[0]
+        toa_up = result.flux_up[-1]
 
         results[name] = {
             "albedo": albedo,

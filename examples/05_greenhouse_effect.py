@@ -122,16 +122,22 @@ def iterative_equilibrium(tau_per_layer, n_layers, solar, albedo, max_iter=100):
 
         # Surface energy balance: absorbed solar = emitted - backradiation
         # sigmaT_s^4 = absorbed_solar + F_down(surface)
-        backradiation = result.flux_down[-1]
+        # After level ordering fix: index 0 = surface, index -1 = TOA
+        backradiation = result.flux_down[0]  # Surface level
         T_surface_new = ((absorbed_solar + backradiation) / STEFAN_BOLTZMANN)**0.25
 
         # Update layer temperatures based on local radiative equilibrium
         for i in range(n_layers):
-            # Layer absorbs and emits
-            F_up_in = result.flux_up[i + 1]
-            F_down_in = result.flux_down[i]
-            F_up_out = result.flux_up[i]
-            F_down_out = result.flux_down[i + 1]
+            # Layer absorbs and emits (layer i is between levels i and i+1)
+            # With surface-to-TOA ordering:
+            #   F_up entering from below = flux_up[i]
+            #   F_up leaving at top = flux_up[i+1]
+            #   F_down entering from above = flux_down[i+1]
+            #   F_down leaving at bottom = flux_down[i]
+            F_up_in = result.flux_up[i]       # From surface side
+            F_up_out = result.flux_up[i + 1]  # To TOA side
+            F_down_in = result.flux_down[i + 1]  # From TOA side
+            F_down_out = result.flux_down[i]     # To surface side
 
             # Net heating of layer
             net_absorbed = (F_up_in - F_up_out) + (F_down_in - F_down_out)
@@ -218,9 +224,9 @@ With {args.n_layers} atmospheric layers (tau_total = {args.tau}):
   Greenhouse warming: {T_surface - T_eff:.1f} K
 
 Flux balance:
-  Outgoing LW at TOA: {result.flux_up[0]:.1f} W/m^2
+  Outgoing LW at TOA: {result.flux_up[-1]:.1f} W/m^2
   Absorbed solar: {absorbed_solar:.1f} W/m^2
-  Backradiation to surface: {result.flux_down[-1]:.1f} W/m^2
+  Backradiation to surface: {result.flux_down[0]:.1f} W/m^2
 """)
 
     # Sensitivity study

@@ -147,11 +147,12 @@ def main():
             surface_albedo=args.albedo,
         )
 
-        # Extract fluxes at surface (last level)
-        F_direct = result.flux_direct[-1]
-        F_diffuse = result.flux_down[-1]
+        # Extract fluxes - with levels_surface_to_toa=True:
+        # index 0 = surface, index -1 = TOA
+        F_direct = result.flux_direct[0]   # Direct flux at surface
+        F_diffuse = result.flux_down[0]    # Diffuse flux at surface
         F_total = F_direct + F_diffuse
-        F_up = result.flux_up[0]  # Reflected at TOA
+        F_up = result.flux_up[-1]          # Reflected at TOA
 
         direct_flux.append(F_direct)
         diffuse_flux.append(F_diffuse)
