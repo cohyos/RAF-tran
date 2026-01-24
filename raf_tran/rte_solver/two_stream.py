@@ -340,7 +340,7 @@ class TwoStreamSolver:
             if tau_prime[i] < 1e-6:
                 # Optically thin limit
                 t[i] = 1 - tau_prime[i] * gamma1
-                r[i] = tau_prime[i] * gamma2
+                r[i] = tau_prime[i] * abs(gamma2)  # Use abs to ensure positive
 
                 # Solar source terms
                 source_factor = omega_prime[i] * flux_direct[i] * tau_prime[i]
@@ -348,10 +348,23 @@ class TwoStreamSolver:
                 source_down[i] = source_factor * gamma3
             else:
                 exp_k_tau = np.exp(-k * tau_prime[i])
-                denom = (k + gamma1) + (k - gamma1) * exp_k_tau**2
 
-                t[i] = 2 * k * exp_k_tau / denom
-                r[i] = (k - gamma1) * (1 - exp_k_tau**2) / denom
+                # Handle conservative scattering case (k -> 0)
+                # When gamma1^2 - gamma2^2 ~ 0, use asymptotic expansion
+                if k * tau_prime[i] < 0.01:
+                    # Conservative scattering limit
+                    # t ~ 1 / (1 + gamma1*tau), r ~ gamma1*tau / (1 + gamma1*tau)
+                    g1_tau = abs(gamma1) * tau_prime[i]
+                    t[i] = 1.0 / (1.0 + g1_tau)
+                    r[i] = g1_tau / (1.0 + g1_tau)
+                else:
+                    denom = (k + gamma1) + (k - gamma1) * exp_k_tau**2
+
+                    t[i] = 2 * k * exp_k_tau / denom
+                    r[i] = abs(k - gamma1) * (1 - exp_k_tau**2) / abs(denom)
+
+                    # Ensure physical bounds
+                    r[i] = max(0, min(r[i], 1 - t[i]))
 
                 # Solar source terms (simplified)
                 exp_tau_mu0 = np.exp(-tau_prime[i] / mu0)
