@@ -43,6 +43,8 @@ Usage:
     python 35_fpa_altitude_detection_study.py --target transport
     python 35_fpa_altitude_detection_study.py --target all  # Compare all targets
     python 35_fpa_altitude_detection_study.py --afterburner
+    python 35_fpa_altitude_detection_study.py --aspect front  # Front aspect detection
+    python 35_fpa_altitude_detection_study.py --front-comparison  # Front aspect altitude heatmaps
     python 35_fpa_altitude_detection_study.py --no-plot
 """
 
@@ -79,6 +81,15 @@ def parse_args():
     parser.add_argument(
         "--afterburner", action="store_true",
         help="Fighter with afterburner engaged"
+    )
+    parser.add_argument(
+        "--aspect", type=str, default="rear",
+        choices=["rear", "front", "side"],
+        help="Target viewing aspect (default: rear)"
+    )
+    parser.add_argument(
+        "--front-comparison", action="store_true",
+        help="Generate front aspect comparison with altitude heatmaps"
     )
     parser.add_argument(
         "--visibility", type=float, default=23.0,
@@ -169,32 +180,35 @@ def create_study_detectors():
     return mwir, lwir_analog, lwir_digital
 
 
-def get_target(target_type, afterburner=False):
-    """Get a single target based on type."""
+def get_target(target_type, afterburner=False, aspect="rear"):
+    """Get a single target based on type and aspect."""
     if target_type == "fighter":
-        return generic_fighter(aspect="rear", afterburner=afterburner)
+        return generic_fighter(aspect=aspect, afterburner=afterburner)
     elif target_type == "transport":
-        return generic_transport(aspect="rear")
+        return generic_transport(aspect=aspect)
     elif target_type == "uav":
-        return generic_uav(aspect="rear")
+        return generic_uav(aspect=aspect)
 
 
 def get_targets(args):
     """Get target(s) based on arguments. Returns dict of {name: target}."""
+    aspect = args.aspect
+    aspect_label = f" ({aspect.capitalize()})"
+
     if args.target == "all":
         targets = {
-            "Fighter": get_target("fighter", args.afterburner),
-            "Transport": get_target("transport"),
-            "UAV": get_target("uav"),
+            f"Fighter{aspect_label}": get_target("fighter", args.afterburner, aspect),
+            f"Transport{aspect_label}": get_target("transport", aspect=aspect),
+            f"UAV{aspect_label}": get_target("uav", aspect=aspect),
         }
         if args.afterburner:
-            targets["Fighter AB"] = get_target("fighter", afterburner=True)
+            targets[f"Fighter AB{aspect_label}"] = get_target("fighter", afterburner=True, aspect=aspect)
         return targets
     else:
-        name = args.target.capitalize()
+        name = args.target.capitalize() + aspect_label
         if args.afterburner and args.target == "fighter":
-            name += " AB"
-        return {name: get_target(args.target, args.afterburner)}
+            name = f"Fighter AB{aspect_label}"
+        return {name: get_target(args.target, args.afterburner, aspect)}
 
 
 def calculate_detection_matrix(detector, target, sensor_heights_m, target_heights_m,
@@ -294,6 +308,207 @@ PHYSICAL EXPLANATION OF RESULTS
 
 ================================================================================
 """)
+
+
+def run_front_aspect_comparison(args, mwir, lwir_analog, lwir_digital):
+    """
+    Generate front aspect comparison with altitude scanning heatmaps.
+
+    Front aspect detection is significantly different from rear:
+    - No direct exhaust plume visibility
+    - Primarily skin temperature detection
+    - LWIR generally performs better than MWIR for front aspect
+    """
+    print("\n" + "=" * 80)
+    print("FRONT ASPECT COMPARISON - All 3 FPA Types")
+    print("=" * 80)
+
+    # Get front aspect fighter target
+    target = generic_fighter(aspect="front", afterburner=False)
+
+    print(f"\nTarget: Fighter (Front Aspect)")
+    print(f"  Skin temperature: {target.skin_temp:.0f} K")
+    print(f"  Skin area: {target.skin_area:.1f} m²")
+    print(f"  MWIR intensity: {target.radiant_intensity_mwir():.1f} W/sr")
+    print(f"  LWIR intensity: {target.radiant_intensity_lwir():.1f} W/sr")
+
+    # Define altitude grid
+    sensor_heights_km = np.array([0, 2, 4, 6, 8, 10, 12, 15])
+    target_heights_km = np.array([0, 2, 4, 6, 8, 10, 12, 15])
+
+    print(f"\nSensor altitudes: {sensor_heights_km} km")
+    print(f"Target altitudes: {target_heights_km} km")
+
+    detectors = [
+        ("MWIR (InSb)", mwir),
+        ("LWIR Analog (MCT)", lwir_analog),
+        ("LWIR Digital (DROIC)", lwir_digital)
+    ]
+
+    # Calculate detection ranges for all combinations
+    results = {}
+    for det_name, det in detectors:
+        print(f"\nCalculating {det_name}...")
+        ranges_km = np.zeros((len(sensor_heights_km), len(target_heights_km)))
+
+        for i, sensor_alt in enumerate(sensor_heights_km):
+            for j, target_alt in enumerate(target_heights_km):
+                result = calculate_detection_range_slant(
+                    det, target,
+                    sensor_alt, target_alt,
+                    args.snr_threshold, args.visibility, args.humidity,
+                )
+                ranges_km[i, j] = result.detection_range_km
+
+        results[det_name] = ranges_km
+
+    # Print results tables
+    print("\n" + "-" * 80)
+    print("FRONT ASPECT DETECTION RANGES (km)")
+    print("-" * 80)
+
+    for det_name, ranges in results.items():
+        print(f"\n{det_name}:")
+        header = "Sensor/Target"
+        print(f"{header:>13}", end="")
+        for t in target_heights_km:
+            print(f"{t:>8.0f}", end="")
+        print(" km")
+        print("-" * (13 + 8 * len(target_heights_km)))
+
+        for i, s in enumerate(sensor_heights_km):
+            print(f"{s:>10.0f} km", end="")
+            for j in range(len(target_heights_km)):
+                print(f"{ranges[i, j]:>8.1f}", end="")
+            print()
+
+    # Find best detector for each configuration
+    print("\n" + "-" * 80)
+    print("BEST DETECTOR BY CONFIGURATION")
+    print("-" * 80)
+
+    det_names = list(results.keys())
+    header = "Sensor/Target"
+    print(f"{header:>13}", end="")
+    for t in target_heights_km:
+        print(f"{t:>8.0f}", end="")
+    print(" km")
+    print("-" * (13 + 8 * len(target_heights_km)))
+
+    for i, s in enumerate(sensor_heights_km):
+        print(f"{s:>10.0f} km", end="")
+        for j in range(len(target_heights_km)):
+            best_det = max(det_names, key=lambda d: results[d][i, j])
+            # Short code: M=MWIR, A=Analog, D=Digital
+            code = "M" if "MWIR" in best_det else ("D" if "Digital" in best_det else "A")
+            print(f"{code:>8}", end="")
+        print()
+
+    print("\nLegend: M=MWIR, A=Analog LWIR, D=Digital LWIR")
+
+    # Summary statistics
+    print("\n" + "-" * 80)
+    print("SUMMARY STATISTICS (Front Aspect)")
+    print("-" * 80)
+
+    for det_name, ranges in results.items():
+        max_range = np.max(ranges)
+        max_idx = np.unravel_index(np.argmax(ranges), ranges.shape)
+        mean_range = np.mean(ranges)
+        print(f"\n{det_name}:")
+        print(f"  Max range: {max_range:.1f} km (sensor={sensor_heights_km[max_idx[0]]:.0f}km, "
+              f"target={target_heights_km[max_idx[1]]:.0f}km)")
+        print(f"  Mean range: {mean_range:.1f} km")
+
+    # Generate plot
+    if not args.no_plot:
+        try:
+            import matplotlib.pyplot as plt
+
+            fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+            fig.suptitle(
+                f'Front Aspect Detection: Fighter Aircraft\n'
+                f'3-Way FPA Comparison (Visibility={args.visibility}km, SNR>{args.snr_threshold})',
+                fontsize=14, fontweight='bold'
+            )
+
+            # Row 1: Heatmaps for each detector
+            cmaps = ['Blues', 'Reds', 'Greens']
+            vmax = max(np.max(r) for r in results.values())
+
+            for idx, (det_name, ranges) in enumerate(results.items()):
+                ax = axes[0, idx]
+                im = ax.imshow(ranges, cmap=cmaps[idx], aspect='auto',
+                              origin='lower', vmin=0, vmax=vmax)
+                ax.set_xticks(range(len(target_heights_km)))
+                ax.set_xticklabels([f'{t:.0f}' for t in target_heights_km])
+                ax.set_yticks(range(len(sensor_heights_km)))
+                ax.set_yticklabels([f'{s:.0f}' for s in sensor_heights_km])
+                ax.set_xlabel('Target Altitude (km)')
+                ax.set_ylabel('Sensor Altitude (km)')
+                ax.set_title(det_name)
+                cbar = plt.colorbar(im, ax=ax)
+                cbar.set_label('Detection Range (km)')
+
+                # Add text annotations
+                for i in range(len(sensor_heights_km)):
+                    for j in range(len(target_heights_km)):
+                        val = ranges[i, j]
+                        color = 'white' if val > vmax/2 else 'black'
+                        ax.text(j, i, f'{val:.0f}', ha='center', va='center',
+                               fontsize=7, color=color)
+
+            # Row 2: Comparison plots
+            # Plot 1: Sensor at ground level (0 km)
+            ax = axes[1, 0]
+            for det_name, ranges in results.items():
+                color = 'blue' if 'MWIR' in det_name else ('green' if 'Digital' in det_name else 'red')
+                ax.plot(target_heights_km, ranges[0, :], 'o-', color=color,
+                       linewidth=2, markersize=6, label=det_name)
+            ax.set_xlabel('Target Altitude (km)')
+            ax.set_ylabel('Detection Range (km)')
+            ax.set_title('Sensor at Ground Level (0 km)')
+            ax.legend(fontsize=8)
+            ax.grid(True, alpha=0.3)
+
+            # Plot 2: Sensor at 10 km altitude
+            ax = axes[1, 1]
+            sensor_10km_idx = np.where(sensor_heights_km == 10)[0][0]
+            for det_name, ranges in results.items():
+                color = 'blue' if 'MWIR' in det_name else ('green' if 'Digital' in det_name else 'red')
+                ax.plot(target_heights_km, ranges[sensor_10km_idx, :], 'o-', color=color,
+                       linewidth=2, markersize=6, label=det_name)
+            ax.set_xlabel('Target Altitude (km)')
+            ax.set_ylabel('Detection Range (km)')
+            ax.set_title('Sensor at 10 km Altitude')
+            ax.legend(fontsize=8)
+            ax.grid(True, alpha=0.3)
+
+            # Plot 3: Digital LWIR advantage over Analog (absolute difference)
+            ax = axes[1, 2]
+            diff = results['LWIR Digital (DROIC)'] - results['LWIR Analog (MCT)']
+            max_diff = max(abs(diff.min()), abs(diff.max()))
+            im = ax.imshow(diff, cmap='RdYlGn', aspect='auto',
+                          origin='lower', vmin=-max_diff, vmax=max_diff)
+            ax.set_xticks(range(len(target_heights_km)))
+            ax.set_xticklabels([f'{t:.0f}' for t in target_heights_km])
+            ax.set_yticks(range(len(sensor_heights_km)))
+            ax.set_yticklabels([f'{s:.0f}' for s in sensor_heights_km])
+            ax.set_xlabel('Target Altitude (km)')
+            ax.set_ylabel('Sensor Altitude (km)')
+            ax.set_title('Digital - Analog LWIR (km)\nGreen=Digital Better')
+            cbar = plt.colorbar(im, ax=ax)
+            cbar.set_label('Range Difference (km)')
+
+            plt.tight_layout()
+            front_output = args.output.replace('.png', '_front_aspect.png')
+            plt.savefig(front_output, dpi=150, bbox_inches='tight')
+            print(f"\nFront aspect comparison plot saved to: {front_output}")
+
+        except ImportError:
+            print("\nNote: matplotlib not available for plotting")
+
+    return results
 
 
 def main():
@@ -501,6 +716,10 @@ Recommended Applications:
 - LWIR Digital: Best cost/performance for skin temperature detection
 - LWIR Analog: Legacy systems, lower cost applications
 """)
+
+    # Front aspect comparison (if requested)
+    if args.front_comparison:
+        run_front_aspect_comparison(args, mwir, lwir_analog, lwir_digital)
 
     # Plotting
     if not args.no_plot:
