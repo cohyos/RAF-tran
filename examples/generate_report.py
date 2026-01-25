@@ -357,6 +357,7 @@ def create_pdf_report(results, output_path, max_lines=0):
 
     # README Chapter - Add overview from README.md
     readme_path = Path(__file__).parent.parent / 'README.md'
+    print(f"Looking for README at: {readme_path}")
     if readme_path.exists():
         story.append(Paragraph("RAF-tran Overview", heading_style))
         story.append(Spacer(1, 0.1*inch))
@@ -364,22 +365,44 @@ def create_pdf_report(results, output_path, max_lines=0):
         readme_sections = parse_readme_sections(readme_path)
         priority_sections = ['Overview', 'Features', 'Quick Start', 'Architecture']
 
+        print(f"Found sections: {list(readme_sections.keys())}")
+
         for section_name in priority_sections:
             if section_name in readme_sections:
                 story.append(Paragraph(section_name, styles['Heading3']))
                 # Truncate very long sections
                 content = readme_sections[section_name]
+                print(f"  {section_name}: {len(content)} chars")
                 if len(content) > 2000:
                     content = content[:2000] + "\n\n[... truncated for brevity ...]"
                 # Clean up markdown syntax for PDF
                 content = content.replace('```python', '').replace('```bash', '').replace('```', '')
                 content = content.replace('**', '').replace('`', '')
-                # Escape special characters
+                # Escape special characters for XML
                 content = content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                story.append(Preformatted(content, code_style))
+
+                # Use Paragraph instead of Preformatted for better rendering
+                # Split into paragraphs for better formatting
+                paragraphs = content.split('\n\n')
+                for para in paragraphs:
+                    if para.strip():
+                        # Replace newlines with <br/> for single line breaks
+                        para_text = para.strip().replace('\n', '<br/>')
+                        try:
+                            story.append(Paragraph(para_text, styles['Normal']))
+                            story.append(Spacer(1, 0.05*inch))
+                        except Exception as e:
+                            print(f"    Error rendering paragraph: {e}")
+                            # Fallback to preformatted
+                            story.append(Preformatted(para.strip(), code_style))
+
                 story.append(Spacer(1, 0.15*inch))
+            else:
+                print(f"  {section_name}: NOT FOUND")
 
         story.append(PageBreak())
+    else:
+        print(f"README not found at: {readme_path}")
 
     # Each example
     for filename, description, output, success, plot_path in results:
