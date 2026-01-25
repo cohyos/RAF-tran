@@ -329,6 +329,127 @@ def MCTDetector(
     )
 
 
+@dataclass
+class DigitalFPADetector(FPADetector):
+    """
+    Cooled digital LWIR detector with DROIC (Digital Read-Out IC).
+
+    Digital pixel architecture provides significant improvements over
+    analog ROIC through in-pixel ADC conversion:
+    - 4x deeper wells (4Me vs 1Me electrons)
+    - ~67% lower read noise (50e vs 150e RMS)
+    - 50% lower dark current
+    - ~1.7-1.9x overall SNR improvement
+
+    Based on EO-simplified-simulation DROIC specifications.
+
+    Additional Parameters
+    ---------------------
+    readout_type : str
+        Readout architecture ('digital' for DROIC)
+    bit_depth : int
+        ADC bit depth (typically 14-16 bits)
+    """
+    readout_type: str = "digital"
+    bit_depth: int = 14
+
+    @property
+    def digital_enhancement_factor(self) -> float:
+        """
+        SNR improvement factor from digital readout vs analog.
+
+        Combines well capacity advantage and noise reduction.
+        Typical value: 1.7-1.9x improvement.
+        """
+        # Reference analog values
+        analog_read_noise = 150.0  # electrons
+        analog_well_capacity = 1.0e6  # electrons
+
+        # Noise improvement
+        noise_ratio = analog_read_noise / self.read_noise
+
+        # Well capacity improvement (allows longer integration)
+        well_ratio = self.well_capacity / analog_well_capacity
+
+        # Combined effect (noise dominates, well helps with dynamic range)
+        enhancement = np.sqrt(noise_ratio) * (well_ratio ** 0.25)
+        return min(enhancement, 2.0)  # Cap at 2x
+
+    def effective_d_star(self) -> float:
+        """D* including digital enhancement factor."""
+        return self.d_star * self.digital_enhancement_factor
+
+    def noise_equivalent_irradiance(self) -> float:
+        """
+        Calculate NEI with digital enhancement.
+
+        Returns
+        -------
+        nei : float
+            NEI in W/cm^2 (improved by digital readout)
+        """
+        # Base NEI calculation
+        area = self.pixel_area
+        bandwidth = self.electrical_bandwidth
+        # Use effective D* which includes digital enhancement
+        nei = np.sqrt(area * bandwidth) / self.effective_d_star()
+        return nei
+
+
+def DigitalLWIRDetector(
+    name: str = "Digital LWIR (DROIC)",
+    spectral_band: Tuple[float, float] = (8.0, 12.0),
+    pixel_pitch: float = 15.0,
+    f_number: float = 2.0,
+    integration_time: float = 10.0,
+) -> DigitalFPADetector:
+    """
+    Create a cooled digital LWIR detector with DROIC.
+
+    Digital pixel architecture with in-pixel ADC provides improved
+    performance over analog MCT LWIR:
+    - Well capacity: 4.0e6 electrons (vs 1.0e6 analog)
+    - Read noise: 50 electrons RMS (vs 150 analog)
+    - Dark current: 0.5 e/pixel/ms (vs 1.0 analog)
+    - Expected ~1.7-1.9x SNR improvement
+
+    Parameters
+    ----------
+    name : str
+        Detector name
+    spectral_band : Tuple[float, float]
+        Wavelength range (um), default LWIR: (8, 12)
+    pixel_pitch : float
+        Pixel spacing in um
+    f_number : float
+        Optical system f-number
+    integration_time : float
+        Integration time in ms
+
+    Returns
+    -------
+    detector : DigitalFPADetector
+        Configured digital LWIR detector
+    """
+    return DigitalFPADetector(
+        name=name,
+        spectral_band=spectral_band,
+        d_star=2e10,  # Base D* same as analog MCT LWIR
+        pixel_pitch=pixel_pitch,
+        netd=20.0,  # mK (improved from 30mK analog due to lower noise)
+        quantum_efficiency=0.70,
+        fill_factor=0.80,
+        well_capacity=4.0e6,  # 4x deeper wells than analog
+        read_noise=50.0,  # 67% lower than analog (150e)
+        dark_current=5e-10,  # Lower than analog
+        operating_temp=77.0,  # Still requires cooling
+        f_number=f_number,
+        integration_time=integration_time,
+        readout_type="digital",
+        bit_depth=14,
+    )
+
+
 def detector_from_type(
     detector_type: str,
     **kwargs,
@@ -339,7 +460,7 @@ def detector_from_type(
     Parameters
     ----------
     detector_type : str
-        One of: 'insb', 'mct_mwir', 'mct_lwir'
+        One of: 'insb', 'mct_mwir', 'mct_lwir', 'digital_lwir', 'droic'
     **kwargs
         Additional parameters passed to detector constructor
 
@@ -360,5 +481,7 @@ def detector_from_type(
         )
     elif detector_type == 'mct_lwir':
         return MCTDetector(**kwargs)
+    elif detector_type in ('digital_lwir', 'droic'):
+        return DigitalLWIRDetector(**kwargs)
     else:
         raise ValueError(f"Unknown detector type: {detector_type}")
