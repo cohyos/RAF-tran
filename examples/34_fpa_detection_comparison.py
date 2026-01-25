@@ -934,6 +934,7 @@ Winner: {winner} by {advantage:.1f}x
 
             else:
                 # Standard 2x2 plot without altitude scan
+                # Include all detectors in the comparison
                 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
                 fig.suptitle(
                     f'FPA Detection Comparison: {targets[0][0]}\n'
@@ -942,26 +943,54 @@ Winner: {winner} by {advantage:.1f}x
                     fontsize=14, fontweight='bold'
                 )
 
-                # Plot 1: SNR vs Range
+                # Calculate SNR for all detectors
+                det_colors = {'InSb': 'blue', 'MCT': 'red', 'Digital': 'green'}
+                det_snr_data = {}
+                det_trans_data = {}
+                det_irrad_data = {}
+                det_range_results = {}
+
+                for det in all_detectors:
+                    snr_det, irrad_det, trans_det = calculate_snr_vs_range(
+                        det, primary_target, ranges,
+                        args.visibility, args.humidity, mean_alt,
+                    )
+                    det_snr_data[det.name] = snr_det
+                    det_trans_data[det.name] = trans_det
+                    det_irrad_data[det.name] = irrad_det
+
+                    result_det = calculate_detection_range_slant(
+                        det, primary_target,
+                        args.sensor_altitude, args.target_altitude,
+                        args.snr_threshold, args.visibility, args.humidity,
+                    )
+                    det_range_results[det.name] = result_det
+
+                # Plot 1: SNR vs Range for all detectors
                 ax1 = axes[0, 0]
-                ax1.semilogy(ranges, snr_insb, 'b-', linewidth=2, label='InSb MWIR (3-5 um)')
-                ax1.semilogy(ranges, snr_mct, 'r-', linewidth=2, label='MCT LWIR (8-12 um)')
+                for det in all_detectors:
+                    # Determine color based on detector type
+                    if 'MWIR' in det.name or 'InSb' in det.name:
+                        color = 'blue'
+                    elif 'Digital' in det.name or 'DROIC' in det.name:
+                        color = 'green'
+                    else:
+                        color = 'red'
+                    ax1.semilogy(ranges, det_snr_data[det.name], color=color, linewidth=2, label=det.name)
+
                 ax1.axhline(y=args.snr_threshold, color='k', linestyle='--',
                            label=f'Detection threshold (SNR={args.snr_threshold})')
-                ax1.axvline(x=result_insb.detection_range_km, color='b', linestyle=':',
-                           alpha=0.7)
-                ax1.axvline(x=result_mct.detection_range_km, color='r', linestyle=':',
-                           alpha=0.7)
                 ax1.set_xlabel('Range (km)')
                 ax1.set_ylabel('Signal-to-Noise Ratio')
                 ax1.set_title('SNR vs Range')
-                ax1.legend()
+                ax1.legend(fontsize=8)
                 ax1.grid(True, alpha=0.3)
                 ax1.set_xlim(0, 50)
                 ax1.set_ylim(0.1, 1000)
 
                 # Plot 2: Atmospheric Transmission
                 ax2 = axes[0, 1]
+                # Just show MWIR and LWIR bands (transmission is the same for analog/digital LWIR)
                 ax2.plot(ranges, trans_insb * 100, 'b-', linewidth=2,
                         label='MWIR (3-5 um)')
                 ax2.plot(ranges, trans_mct * 100, 'r-', linewidth=2,
@@ -974,37 +1003,52 @@ Winner: {winner} by {advantage:.1f}x
                 ax2.set_xlim(0, 50)
                 ax2.set_ylim(0, 100)
 
-                # Plot 3: Target Irradiance vs Range
+                # Plot 3: Target Irradiance vs Range for all detectors
                 ax3 = axes[1, 0]
-                ax3.semilogy(ranges, irrad_insb, 'b-', linewidth=2,
-                            label='MWIR irradiance')
-                ax3.semilogy(ranges, irrad_mct, 'r-', linewidth=2,
-                            label='LWIR irradiance')
-                ax3.axhline(y=insb.noise_equivalent_irradiance(), color='b',
-                           linestyle='--', alpha=0.7, label='MWIR NEI')
-                ax3.axhline(y=mct.noise_equivalent_irradiance(), color='r',
-                           linestyle='--', alpha=0.7, label='LWIR NEI')
+                for det in all_detectors:
+                    if 'MWIR' in det.name or 'InSb' in det.name:
+                        color = 'blue'
+                    elif 'Digital' in det.name or 'DROIC' in det.name:
+                        color = 'green'
+                    else:
+                        color = 'red'
+                    ax3.semilogy(ranges, det_irrad_data[det.name], color=color, linewidth=2,
+                                label=f'{det.name} irradiance')
+                    ax3.axhline(y=det.noise_equivalent_irradiance(), color=color,
+                               linestyle='--', alpha=0.7, label=f'{det.name.split()[0]} NEI')
+
                 ax3.set_xlabel('Range (km)')
                 ax3.set_ylabel('Irradiance (W/cm^2)')
                 ax3.set_title('Target Irradiance at Detector')
-                ax3.legend()
+                ax3.legend(fontsize=7)
                 ax3.grid(True, alpha=0.3)
                 ax3.set_xlim(0, 50)
 
-                # Plot 4: Detection Range Comparison Bar Chart
+                # Plot 4: Detection Range Comparison Bar Chart for ALL detectors
                 ax4 = axes[1, 1]
-                detectors_names = ['InSb\nMWIR', 'MCT\nLWIR']
-                det_ranges = [result_insb.detection_range_km, result_mct.detection_range_km]
-                colors = ['blue', 'red']
-                bars = ax4.bar(detectors_names, det_ranges, color=colors, alpha=0.7, edgecolor='black')
+                det_names_short = []
+                det_ranges_vals = []
+                det_colors_list = []
+                for det in all_detectors:
+                    short_name = det.name.replace(' (', '\n(')
+                    det_names_short.append(short_name)
+                    det_ranges_vals.append(det_range_results[det.name].detection_range_km)
+                    if 'MWIR' in det.name or 'InSb' in det.name:
+                        det_colors_list.append('blue')
+                    elif 'Digital' in det.name or 'DROIC' in det.name:
+                        det_colors_list.append('green')
+                    else:
+                        det_colors_list.append('red')
+
+                bars = ax4.bar(det_names_short, det_ranges_vals, color=det_colors_list, alpha=0.7, edgecolor='black')
                 ax4.set_ylabel('Detection Range (km)')
                 ax4.set_title(f'Detection Range Comparison (SNR > {args.snr_threshold})')
                 ax4.grid(True, alpha=0.3, axis='y')
 
                 # Add value labels on bars
-                for bar, val in zip(bars, det_ranges):
+                for bar, val in zip(bars, det_ranges_vals):
                     ax4.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                            f'{val:.1f} km', ha='center', va='bottom', fontweight='bold')
+                            f'{val:.1f} km', ha='center', va='bottom', fontweight='bold', fontsize=9)
 
                 plt.tight_layout()
                 plt.savefig(args.output, dpi=150, bbox_inches='tight')

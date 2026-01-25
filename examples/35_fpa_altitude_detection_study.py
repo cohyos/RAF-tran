@@ -633,22 +633,20 @@ Recommended Applications:
                     ax.set_xlim(0, 15)
 
                 # Bottom row: Comparison metrics
-                # Plot 1: Digital vs Analog improvement
+                # Plot 1: Absolute ranges comparison (Digital vs Analog LWIR)
                 ax = axes[1, 0]
-                for idx, target_h in enumerate(target_heights_m):
-                    improvement = []
-                    for sensor_idx in range(len(sensor_heights_m)):
-                        r_analog = results[lwir_analog.name][sensor_idx, idx]
-                        r_digital = results[lwir_digital.name][sensor_idx, idx]
-                        if r_analog > 0:
-                            improvement.append((r_digital / r_analog - 1) * 100)
-                        else:
-                            improvement.append(0)
-                    ax.plot(sensor_heights_m / 1000, improvement,
-                           linewidth=2, label=f'Target {target_h/1000:.0f}km')
+                # Use target at 10km (index 2)
+                target_idx = 2
+                r_analog = results[lwir_analog.name][:, target_idx]
+                r_digital = results[lwir_digital.name][:, target_idx]
+
+                ax.plot(sensor_heights_m / 1000, r_analog, 'r-', linewidth=2, label='Analog LWIR')
+                ax.plot(sensor_heights_m / 1000, r_digital, 'g-', linewidth=2, label='Digital LWIR')
+                ax.fill_between(sensor_heights_m / 1000, r_analog, r_digital, alpha=0.3, color='green',
+                               where=(r_digital > r_analog), label='Digital advantage')
                 ax.set_xlabel('Sensor Altitude (km)')
-                ax.set_ylabel('Improvement (%)')
-                ax.set_title('Digital LWIR vs Analog LWIR')
+                ax.set_ylabel('Detection Range (km)')
+                ax.set_title('Digital vs Analog LWIR (Target at 10km)')
                 ax.legend(fontsize=8)
                 ax.grid(True, alpha=0.3)
                 ax.set_xlim(0, 15)
@@ -701,6 +699,34 @@ Recommended Applications:
                 plt.tight_layout()
                 plt.savefig(args.output, dpi=150, bbox_inches='tight')
                 print(f"\nPlot saved to: {args.output}")
+
+                # Generate additional absolute ranges comparison plot
+                abs_output = args.output.replace('.png', '_absolute.png')
+                fig3, axes3 = plt.subplots(1, 3, figsize=(16, 5))
+                first_target = list(targets.keys())[0]
+                fig3.suptitle(
+                    f'FPA Absolute Detection Ranges Comparison\n'
+                    f'Target: {first_target}, Visibility={args.visibility}km, SNR>{args.snr_threshold}',
+                    fontsize=14, fontweight='bold'
+                )
+
+                # For each target altitude, show all three detectors
+                for idx, target_h in enumerate(target_heights_m):
+                    ax = axes3[idx]
+                    for det_name, det_ranges in results.items():
+                        ax.plot(sensor_heights_m / 1000, det_ranges[:, idx],
+                               color=colors[det_name], linewidth=2, label=det_name)
+
+                    ax.set_xlabel('Sensor Altitude (km)')
+                    ax.set_ylabel('Detection Range (km)')
+                    ax.set_title(f'Target at {target_h/1000:.0f} km Altitude')
+                    ax.legend(fontsize=8)
+                    ax.grid(True, alpha=0.3)
+                    ax.set_xlim(0, 15)
+
+                plt.tight_layout()
+                plt.savefig(abs_output, dpi=150, bbox_inches='tight')
+                print(f"Absolute ranges plot saved to: {abs_output}")
 
         except ImportError:
             print("\nNote: matplotlib not available for plotting")
