@@ -17,10 +17,11 @@ solve_rte
     General RTE solver interface
 """
 
-from raf_tran.rte_solver.two_stream import TwoStreamSolver
+from raf_tran.rte_solver.two_stream import TwoStreamSolver, TwoStreamMethod
 from raf_tran.rte_solver.disort import DiscreteOrdinatesSolver
 
 __all__ = [
     "TwoStreamSolver",
+    "TwoStreamMethod",
     "DiscreteOrdinatesSolver",
 ]

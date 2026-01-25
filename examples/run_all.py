@@ -53,6 +53,7 @@ EXAMPLES = [
     ("29_aod_retrieval_visibility.py", "AOD Retrieval and Visibility"),
     ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
     ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
+    ("32_config_file_demo.py", "Configuration File Usage"),
 ]
 
 

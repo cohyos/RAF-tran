@@ -246,6 +246,7 @@ python 01_solar_zenith_angle_study.py --help
 | 29 | `aod_retrieval_visibility.py` | Langley calibration, AERONET-style AOD |
 | 30 | `spectral_surface_albedo.py` | Snow/ice, vegetation red edge, NDVI |
 | 31 | `limb_viewing_geometry.py` | Satellite limb sounding, onion-peeling retrieval |
+| 32 | `config_file_demo.py` | YAML/JSON configuration file usage |
 
 ### Example Usage
 
@@ -277,7 +278,34 @@ python 29_aod_retrieval_visibility.py --aod 0.3 --angstrom 1.4
 
 # Limb viewing geometry for satellite missions
 python 31_limb_viewing_geometry.py --tangent-height 30
+
+# Configuration file usage
+python 32_config_file_demo.py --config configs/sample_simulation.yaml
 ```
+
+## Configuration Files
+
+RAF-tran supports YAML and JSON configuration files for reproducible simulation setups:
+
+```python
+from raf_tran.utils import load_config, validate_config, create_default_config
+
+# Load configuration from file
+config = load_config("simulation.yaml")
+
+# Validate configuration
+issues = validate_config(config)
+if issues:
+    print("Configuration issues:", issues)
+
+# Create default config template
+create_default_config("my_config.yaml")
+```
+
+Sample configuration files are provided in `examples/configs/`:
+- `sample_simulation.yaml` - Comprehensive example with all options
+- `cloudy_atmosphere.yaml` - Stratocumulus cloud scenario
+- `volcanic_scenario.json` - Post-volcanic eruption atmosphere (JSON format)
 
 ## Testing
 
@@ -313,7 +341,8 @@ raf_tran/
 └── utils/            # Utilities and constants
     ├── constants.py  # Physical constants
     ├── spectral.py   # Spectral functions
-    └── air_mass.py   # Chapman function, air mass (NEW)
+    ├── air_mass.py   # Chapman function, air mass
+    └── config.py     # YAML/JSON configuration support (NEW)
 ```
 
 ## Scientific Background

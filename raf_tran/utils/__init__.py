@@ -41,6 +41,17 @@ chapman_function
     Chapman function for spherical atmosphere
 validate_solar_geometry
     Validate solar zenith angle and return cosine
+
+Configuration
+-------------
+SimulationConfig
+    Complete simulation configuration dataclass
+load_config
+    Load configuration from YAML or JSON file
+create_default_config
+    Create and save default configuration file
+validate_config
+    Validate configuration and return issues list
 """
 
 from raf_tran.utils.constants import (
@@ -65,6 +76,20 @@ from raf_tran.utils.air_mass import (
     chapman_function,
     validate_solar_geometry,
 )
+from raf_tran.utils.config import (
+    SimulationConfig,
+    AtmosphereConfig,
+    AerosolConfig,
+    CloudConfig,
+    SurfaceConfig,
+    SolarConfig,
+    SpectralConfig,
+    SolverConfig,
+    OutputConfig,
+    load_config,
+    create_default_config,
+    validate_config,
+)
 
 __all__ = [
     "SPEED_OF_LIGHT",
@@ -83,4 +108,17 @@ __all__ = [
     "kasten_young_air_mass",
     "chapman_function",
     "validate_solar_geometry",
+    # Configuration
+    "SimulationConfig",
+    "AtmosphereConfig",
+    "AerosolConfig",
+    "CloudConfig",
+    "SurfaceConfig",
+    "SolarConfig",
+    "SpectralConfig",
+    "SolverConfig",
+    "OutputConfig",
+    "load_config",
+    "create_default_config",
+    "validate_config",
 ]

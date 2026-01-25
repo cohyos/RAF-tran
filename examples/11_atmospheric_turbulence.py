@@ -324,10 +324,10 @@ Scaling: r0 ~ wavelength^(6/5), sigma_I^2 ~ wavelength^(-7/6)
             ax2.legend()
             ax2.grid(True, alpha=0.3)
 
-            # Plot 3: Fried parameter vs wavelength
+            # Plot 3: Fried parameter vs wavelength (vectorized)
             ax3 = axes[1, 0]
             wavelengths_plot = np.linspace(0.4, 12, 100)
-            r0_vs_wl = [fried_parameter(wl*1e-6, cn2_integrated)*100 for wl in wavelengths_plot]
+            r0_vs_wl = fried_parameter(wavelengths_plot * 1e-6, cn2_integrated) * 100
 
             ax3.plot(wavelengths_plot, r0_vs_wl, 'b-', linewidth=2)
             ax3.axhline(args.aperture*100, color='red', linestyle='--',

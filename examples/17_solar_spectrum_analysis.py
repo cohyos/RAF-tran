@@ -151,9 +151,9 @@ def main():
     for name, (wl_min, wl_max, desc) in bands.items():
         print(f"{name:<12} {wl_min:>5}-{wl_max:<8} {desc:<30}")
 
-    # Calculate spectral irradiance
+    # Calculate spectral irradiance (vectorized)
     wavelengths = np.linspace(200, 2500, 500)  # nm
-    E_toa = np.array([approximate_solar_spectrum(wl) for wl in wavelengths])
+    E_toa = approximate_solar_spectrum(wavelengths)
 
     # Atmospheric transmission
     print("\n" + "-" * 70)

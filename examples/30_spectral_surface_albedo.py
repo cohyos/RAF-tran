@@ -424,25 +424,24 @@ def effective_broadband_albedo(surface_func, sza_deg=30, **kwargs):
     albedo_bb : float
         Broadband albedo
     """
-    # Solar spectral weighting (simplified)
+    # Solar spectral weighting (simplified, vectorized)
     wavelengths = np.linspace(0.35, 2.5, 100)
-    solar_weights = []
 
-    for wl in wavelengths:
-        # Approximate solar spectrum
-        if wl < 0.5:
-            weight = 1.0
-        elif wl < 1.0:
-            weight = 1.2 - 0.4 * (wl - 0.5)
-        else:
-            weight = 0.8 - 0.3 * (wl - 1.0)
-        solar_weights.append(max(0.1, weight))
+    # Vectorized solar weight calculation
+    solar_weights = np.where(
+        wavelengths < 0.5,
+        1.0,
+        np.where(
+            wavelengths < 1.0,
+            1.2 - 0.4 * (wavelengths - 0.5),
+            0.8 - 0.3 * (wavelengths - 1.0)
+        )
+    )
+    solar_weights = np.maximum(0.1, solar_weights)
 
-    solar_weights = np.array(solar_weights)
-
-    # Calculate weighted average
-    albedos = [surface_func(wl, **kwargs) for wl in wavelengths]
-    albedo_bb = np.sum(np.array(albedos) * solar_weights) / np.sum(solar_weights)
+    # Calculate weighted average (vectorized)
+    albedos = np.array([surface_func(wl, **kwargs) for wl in wavelengths])
+    albedo_bb = np.sum(albedos * solar_weights) / np.sum(solar_weights)
 
     return albedo_bb
 

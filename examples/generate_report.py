@@ -79,6 +79,7 @@ EXAMPLES = [
     ("29_aod_retrieval_visibility.py", "AOD Retrieval and Visibility"),
     ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
     ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
+    ("32_config_file_demo.py", "Configuration File Usage"),
 ]
 
 
@@ -166,6 +167,7 @@ def find_plot_for_example(filename, work_dir):
         "29_aod_retrieval_visibility.py": "aod_visibility.png",
         "30_spectral_surface_albedo.py": "spectral_albedo.png",
         "31_limb_viewing_geometry.py": "limb_viewing.png",
+        "32_config_file_demo.py": "config_file_demo.png",
     }
 
     if filename in plot_mappings:
