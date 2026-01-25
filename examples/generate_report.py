@@ -45,6 +45,7 @@ except ImportError:
 
 
 EXAMPLES = [
+    # Core Examples (Demonstration)
     ("01_solar_zenith_angle_study.py", "Solar Zenith Angle Effects"),
     ("02_spectral_transmission.py", "Spectral Transmission (Sky Color)"),
     ("03_aerosol_types_comparison.py", "Aerosol Types Comparison"),
@@ -55,6 +56,29 @@ EXAMPLES = [
     ("08_ozone_uv_absorption.py", "Ozone UV Absorption"),
     ("09_radiative_heating_rates.py", "Radiative Heating Rates"),
     ("10_satellite_observation.py", "Satellite Observation Simulation"),
+    ("11_atmospheric_turbulence.py", "Atmospheric Turbulence (Cn2, Fried)"),
+    # Validation Examples (Physics Verification)
+    ("12_beer_lambert_validation.py", "Beer-Lambert Law Validation"),
+    ("13_planck_blackbody_validation.py", "Planck Blackbody Validation"),
+    ("14_rayleigh_scattering_validation.py", "Rayleigh Scattering Validation"),
+    ("15_mie_scattering_validation.py", "Mie Scattering Validation"),
+    ("16_two_stream_benchmarks.py", "Two-Stream Solver Benchmarks"),
+    ("17_solar_spectrum_analysis.py", "Solar Spectrum Analysis"),
+    ("18_thermal_emission_validation.py", "Thermal Emission Validation"),
+    ("19_path_radiance_remote_sensing.py", "Path Radiance Remote Sensing"),
+    ("20_visibility_contrast.py", "Visibility and Contrast"),
+    ("21_laser_propagation.py", "Laser Propagation"),
+    # Advanced Applications
+    ("22_atmospheric_polarization.py", "Atmospheric Polarization"),
+    ("23_infrared_atmospheric_windows.py", "IR Atmospheric Windows"),
+    ("24_volcanic_aerosol_forcing.py", "Volcanic Aerosol Forcing"),
+    ("25_water_vapor_feedback.py", "Water Vapor Feedback"),
+    ("26_high_altitude_solar.py", "High Altitude Solar Radiation"),
+    ("27_twilight_spectra.py", "Twilight Spectra"),
+    ("28_multi_layer_cloud.py", "Multi-Layer Cloud Overlap"),
+    ("29_aod_retrieval_visibility.py", "AOD Retrieval and Visibility"),
+    ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
+    ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
 ]
 
 
@@ -117,6 +141,27 @@ def find_plot_for_example(filename, work_dir):
         "08_ozone_uv_absorption.py": "ozone_uv_absorption.png",
         "09_radiative_heating_rates.py": "radiative_heating_rates.png",
         "10_satellite_observation.py": "satellite_observation.png",
+        "11_atmospheric_turbulence.py": "atmospheric_turbulence.png",
+        "12_beer_lambert_validation.py": "beer_lambert_validation.png",
+        "13_planck_blackbody_validation.py": "planck_blackbody_validation.png",
+        "14_rayleigh_scattering_validation.py": "rayleigh_scattering_validation.png",
+        "15_mie_scattering_validation.py": "mie_scattering_validation.png",
+        "16_two_stream_benchmarks.py": "two_stream_benchmarks.png",
+        "17_solar_spectrum_analysis.py": "solar_spectrum_analysis.png",
+        "18_thermal_emission_validation.py": "thermal_emission_validation.png",
+        "19_path_radiance_remote_sensing.py": "path_radiance_remote_sensing.png",
+        "20_visibility_contrast.py": "visibility_contrast.png",
+        "21_laser_propagation.py": "laser_propagation.png",
+        "22_atmospheric_polarization.py": "atmospheric_polarization.png",
+        "23_infrared_atmospheric_windows.py": "infrared_atmospheric_windows.png",
+        "24_volcanic_aerosol_forcing.py": "volcanic_aerosol_forcing.png",
+        "25_water_vapor_feedback.py": "water_vapor_feedback.png",
+        "26_high_altitude_solar.py": "high_altitude_solar.png",
+        "27_twilight_spectra.py": "twilight_spectra.png",
+        "28_multi_layer_cloud.py": "multi_layer_cloud.png",
+        "29_aod_retrieval_visibility.py": "aod_visibility.png",
+        "30_spectral_surface_albedo.py": "spectral_albedo.png",
+        "31_limb_viewing_geometry.py": "limb_viewing.png",
     }
 
     if filename in plot_mappings:
