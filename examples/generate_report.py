@@ -135,7 +135,7 @@ def parse_readme_sections(readme_path):
     current_content = []
 
     try:
-        with open(readme_path) as f:
+        with open(readme_path, encoding='utf-8') as f:
             lines = f.readlines()
 
         for line in lines:
