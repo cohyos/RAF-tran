@@ -189,7 +189,7 @@ else:
 
 ## Examples
 
-The `examples/` directory contains 21 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
+The `examples/` directory contains 31 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
 - Command-line arguments for customization
 - Detailed console output with explanations
 - Generated plots (requires matplotlib)
@@ -215,7 +215,7 @@ python 01_solar_zenith_angle_study.py --help
 | 08 | `ozone_uv_absorption.py` | Ozone layer and UV protection |
 | 09 | `radiative_heating_rates.py` | Atmospheric heating/cooling calculations |
 | 10 | `satellite_observation.py` | Simulate satellite remote sensing |
-| 11 | `atmospheric_turbulence.py` | Cn2 profiles and beam propagation (NEW) |
+| 11 | `atmospheric_turbulence.py` | Cn2 profiles and beam propagation |
 
 ### Validation Examples (Physics Verification)
 
@@ -231,6 +231,21 @@ python 01_solar_zenith_angle_study.py --help
 | 19 | `path_radiance_remote_sensing.py` | Atmospheric correction for satellite imagery |
 | 20 | `visibility_contrast.py` | Koschmieder's law and contrast reduction |
 | 21 | `laser_propagation.py` | Combined absorption + turbulence effects |
+
+### Advanced Applications (NEW)
+
+| # | Example | Description |
+|---|---------|-------------|
+| 22 | `atmospheric_polarization.py` | Rayleigh/Mie polarization, sky polarization patterns |
+| 23 | `infrared_atmospheric_windows.py` | MWIR/LWIR transmission, EO-IR sensor design |
+| 24 | `volcanic_aerosol_forcing.py` | Pinatubo-type cooling, stratospheric sulfate |
+| 25 | `water_vapor_feedback.py` | Clausius-Clapeyron, climate sensitivity |
+| 26 | `high_altitude_solar.py` | Aviation/HAPS dosimetry, altitude effects |
+| 27 | `twilight_spectra.py` | Sunset/sunrise colors, Chappuis band |
+| 28 | `multi_layer_cloud.py` | Cloud overlap schemes (max, random, max-random) |
+| 29 | `aod_retrieval_visibility.py` | Langley calibration, AERONET-style AOD |
+| 30 | `spectral_surface_albedo.py` | Snow/ice, vegetation red edge, NDVI |
+| 31 | `limb_viewing_geometry.py` | Satellite limb sounding, onion-peeling retrieval |
 
 ### Example Usage
 
@@ -249,6 +264,19 @@ python 07_cloud_radiative_effects.py --cloud-type Cirrus --sza 30
 
 # Ozone depletion impact on UV
 python 08_ozone_uv_absorption.py --ozone-column 200 --sza 45
+
+# Advanced examples (NEW):
+# IR atmospheric windows for EO sensor design
+python 23_infrared_atmospheric_windows.py --altitude 5 --water-vapor 1.0
+
+# Twilight spectra analysis
+python 27_twilight_spectra.py --sza 92
+
+# AOD retrieval and visibility
+python 29_aod_retrieval_visibility.py --aod 0.3 --angstrom 1.4
+
+# Limb viewing geometry for satellite missions
+python 31_limb_viewing_geometry.py --tangent-height 30
 ```
 
 ## Testing
