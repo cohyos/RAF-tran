@@ -58,6 +58,9 @@ class AircraftSignature:
         Skin emissivity (0-1)
     aspect : str
         Viewing aspect ('rear', 'side', 'front')
+    characteristic_dimension_m : float
+        Characteristic dimension for Johnson criteria (m)
+        Typically the aircraft length or wingspan
     """
     name: str
     exhaust_temp: float = 700.0  # K
@@ -70,6 +73,7 @@ class AircraftSignature:
     skin_area: float = 20.0  # m^2
     skin_emissivity: float = 0.9
     aspect: str = "rear"
+    characteristic_dimension_m: float = 15.0  # m (for Johnson criteria)
 
     def total_radiant_intensity_band(
         self,
@@ -252,6 +256,7 @@ class AircraftSignature:
             skin_area=base_signature.skin_area * factors['skin'],
             skin_emissivity=base_signature.skin_emissivity,
             aspect=aspect,
+            characteristic_dimension_m=base_signature.characteristic_dimension_m,
         )
 
 
@@ -301,6 +306,7 @@ def generic_fighter(
         skin_area=25.0,  # m^2 total visible area
         skin_emissivity=0.9,
         aspect=aspect,
+        characteristic_dimension_m=15.0,  # Fighter length ~15m
     )
 
     return AircraftSignature.with_aspect(base, aspect)
@@ -340,6 +346,7 @@ def generic_transport(
         skin_area=150.0,  # m^2 (larger aircraft)
         skin_emissivity=0.9,
         aspect=aspect,
+        characteristic_dimension_m=60.0,  # Large transport ~60m
     )
 
     return AircraftSignature.with_aspect(base, aspect)
@@ -379,6 +386,7 @@ def generic_uav(
         skin_area=5.0,  # m^2 (small platform)
         skin_emissivity=0.9,
         aspect=aspect,
+        characteristic_dimension_m=3.0,  # Medium UAV wingspan ~3m
     )
 
     return AircraftSignature.with_aspect(base, aspect)

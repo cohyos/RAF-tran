@@ -1,0 +1,74 @@
+# Detection Scenario Configuration
+# =================================
+# This file defines a complete detection scenario for FPA comparison.
+# Use with: python 34_fpa_detection_comparison.py --config configs/detection_scenario.yaml
+
+name: "Multi-Target Detection Comparison"
+description: "Compare MWIR (InSb) vs LWIR (MCT) detection capabilities across different aircraft types"
+
+# Environmental and geometry parameters
+scenario:
+  sensor_altitude_km: 0.0       # Ground-based sensor
+  target_altitude_km: 10.0      # Typical cruise altitude
+  visibility_km: 23.0           # Standard clear day visibility
+  humidity_percent: 50.0        # Moderate humidity
+  snr_threshold: 5.0            # Detection SNR threshold
+  max_range_km: 100.0           # Maximum analysis range
+
+# Detector specifications
+detectors:
+  - name: "InSb MWIR"
+    type: "insb"                # Indium Antimonide (3-5 um)
+    pixel_pitch: 15.0           # um
+    f_number: 2.0
+    integration_time: 10.0      # ms
+
+  - name: "MCT LWIR"
+    type: "mct"                 # Mercury Cadmium Telluride (8-12 um)
+    pixel_pitch: 20.0           # um
+    f_number: 2.0
+    integration_time: 10.0      # ms
+
+# Target specifications
+targets:
+  - name: "Fighter (Rear)"
+    type: "fighter"
+    aspect: "rear"
+    afterburner: false
+    mach: 0.9
+    characteristic_dimension_m: 15.0
+
+  - name: "Fighter AB (Rear)"
+    type: "fighter"
+    aspect: "rear"
+    afterburner: true
+    mach: 1.2
+    characteristic_dimension_m: 15.0
+
+  - name: "Fighter (Side)"
+    type: "fighter"
+    aspect: "side"
+    afterburner: false
+    mach: 0.9
+    characteristic_dimension_m: 15.0
+
+  - name: "Transport (Rear)"
+    type: "transport"
+    aspect: "rear"
+    mach: 0.8
+    characteristic_dimension_m: 60.0
+
+  - name: "UAV (Rear)"
+    type: "uav"
+    aspect: "rear"
+    mach: 0.4
+    characteristic_dimension_m: 3.0
+
+# Types of analysis to perform
+analysis_types:
+  - detection_range      # SNR-based detection range
+  - recognition_range    # Johnson criteria ranges
+  - johnson_probability  # Probability curves
+
+# Johnson criteria target probability
+johnson_probability: 0.5

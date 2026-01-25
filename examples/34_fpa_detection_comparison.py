@@ -3,9 +3,10 @@
 FPA Detection Range Comparison
 ==============================
 
-This example compares the detection range of fighter aircraft using
-two different Focal Plane Array (FPA) sensor technologies:
+This example compares the detection range of aircraft using different
+Focal Plane Array (FPA) sensor technologies with Johnson criteria analysis.
 
+Sensor Technologies:
 1. InSb (Indium Antimonide) - MWIR (3-5 um)
    - High sensitivity in mid-wave infrared
    - Excellent for hot target detection (exhaust plumes)
@@ -16,35 +17,32 @@ two different Focal Plane Array (FPA) sensor technologies:
    - Better for detecting cooler skin temperatures
    - Also requires cryogenic cooling
 
-The comparison considers:
-- Target signature (fighter aircraft with/without afterburner)
-- Atmospheric transmission in each band (with slant path geometry)
-- Detector sensitivity (D*, NETD)
-- SNR vs range curves
-- Sensor and target altitude effects
-
-Applications:
-- Missile warning systems
-- IRST (Infrared Search and Track)
-- Air defense sensors
-- Target acquisition systems
+Features:
+- SNR-based detection range calculations
+- Johnson criteria recognition ranges (detection/orientation/recognition/identification)
+- Multi-target comparison (fighter, transport, UAV)
+- YAML configuration file support
+- Slant path atmospheric transmission
+- Altitude scan analysis
 
 Usage:
     python 34_fpa_detection_comparison.py
     python 34_fpa_detection_comparison.py --afterburner
-    python 34_fpa_detection_comparison.py --sensor-altitude 0 --target-altitude 10
+    python 34_fpa_detection_comparison.py --target all --johnson
+    python 34_fpa_detection_comparison.py --config configs/detection_scenario.yaml
     python 34_fpa_detection_comparison.py --altitude-scan
 """
 
 import argparse
 import numpy as np
 import sys
+import os
 
 sys.path.insert(0, '..')
 
 try:
     from raf_tran.detectors import InSbDetector, MCTDetector
-    from raf_tran.targets import generic_fighter
+    from raf_tran.targets import generic_fighter, generic_transport, generic_uav
     from raf_tran.detection import (
         calculate_detection_range,
         calculate_snr_vs_range,
@@ -52,6 +50,19 @@ try:
         calculate_detection_range_slant,
         scan_altitude_performance,
         elevation_angle,
+        # Johnson criteria
+        RecognitionTask,
+        JOHNSON_CYCLES,
+        detection_probability,
+        cycles_on_target,
+        range_for_probability,
+        calculate_recognition_ranges,
+        calculate_probability_vs_range,
+        johnson_analysis,
+        # Scenario loading
+        load_scenario,
+        create_detector,
+        create_target,
     )
 except ImportError as e:
     print(f"Error: Could not import raf_tran modules: {e}")
@@ -61,7 +72,16 @@ except ImportError as e:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Compare FPA detection ranges for fighter aircraft"
+        description="Compare FPA detection ranges for aircraft with Johnson criteria"
+    )
+    parser.add_argument(
+        "--config", type=str,
+        help="YAML scenario configuration file"
+    )
+    parser.add_argument(
+        "--target", type=str, default="fighter",
+        choices=["fighter", "transport", "uav", "all"],
+        help="Target type to analyze (default: fighter)"
     )
     parser.add_argument(
         "--afterburner", action="store_true",
@@ -93,6 +113,14 @@ def parse_args():
         help="SNR threshold for detection (default: 5)"
     )
     parser.add_argument(
+        "--johnson", action="store_true",
+        help="Calculate Johnson criteria recognition ranges"
+    )
+    parser.add_argument(
+        "--probability", type=float, default=0.5,
+        help="Target probability for Johnson criteria (default: 0.5)"
+    )
+    parser.add_argument(
         "--altitude-scan", action="store_true",
         help="Run altitude scan and generate comparison heatmap"
     )
@@ -107,47 +135,184 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_targets(args):
+    """Get list of targets based on arguments."""
+    targets = []
+
+    if args.target == "all":
+        # All target types
+        targets.append(("Fighter (Rear)", generic_fighter(aspect="rear", afterburner=False)))
+        if args.afterburner:
+            targets.append(("Fighter AB (Rear)", generic_fighter(aspect="rear", afterburner=True)))
+        targets.append(("Fighter (Side)", generic_fighter(aspect="side", afterburner=False)))
+        targets.append(("Transport (Rear)", generic_transport(aspect="rear")))
+        targets.append(("UAV (Rear)", generic_uav(aspect="rear")))
+    elif args.target == "fighter":
+        name = "Fighter AB" if args.afterburner else "Fighter"
+        targets.append((f"{name} ({args.aspect})",
+                       generic_fighter(aspect=args.aspect, afterburner=args.afterburner)))
+    elif args.target == "transport":
+        targets.append((f"Transport ({args.aspect})",
+                       generic_transport(aspect=args.aspect)))
+    elif args.target == "uav":
+        targets.append((f"UAV ({args.aspect})",
+                       generic_uav(aspect=args.aspect)))
+
+    return targets
+
+
+def print_johnson_analysis(insb, mct, targets, args):
+    """Print Johnson criteria recognition ranges for all targets."""
+    print("\n" + "=" * 80)
+    print("JOHNSON CRITERIA RECOGNITION RANGES (P = {:.0%})".format(args.probability))
+    print("=" * 80)
+
+    print("\nJohnson criteria relate resolution cycles on target to recognition tasks:")
+    print("  Detection:      {:.1f} cycles - Is something there?".format(JOHNSON_CYCLES[RecognitionTask.DETECTION]))
+    print("  Orientation:    {:.1f} cycles - Which way is it facing?".format(JOHNSON_CYCLES[RecognitionTask.ORIENTATION]))
+    print("  Recognition:    {:.1f} cycles - What type/class is it?".format(JOHNSON_CYCLES[RecognitionTask.RECOGNITION]))
+    print("  Identification: {:.1f} cycles - What specific model?".format(JOHNSON_CYCLES[RecognitionTask.IDENTIFICATION]))
+
+    # Header
+    print("\n" + "-" * 80)
+    print("{:20} {:>10} {:>10} {:>10} {:>10} {:>10}".format(
+        "Target", "Dim (m)", "IFOV", "Det", "Rec", "ID"))
+    print("{:20} {:>10} {:>10} {:>10} {:>10} {:>10}".format(
+        "", "", "(mrad)", "(km)", "(km)", "(km)"))
+    print("-" * 80)
+
+    for name, target in targets:
+        dim = target.characteristic_dimension_m
+
+        # MWIR ranges
+        mwir_ranges = calculate_recognition_ranges(dim, insb.ifov, args.probability)
+        det_mwir = mwir_ranges[RecognitionTask.DETECTION] / 1000
+        rec_mwir = mwir_ranges[RecognitionTask.RECOGNITION] / 1000
+        id_mwir = mwir_ranges[RecognitionTask.IDENTIFICATION] / 1000
+
+        print("{:20} {:>10.1f} {:>10.2f} {:>10.1f} {:>10.1f} {:>10.1f}  MWIR".format(
+            name[:20], dim, insb.ifov, det_mwir, rec_mwir, id_mwir))
+
+        # LWIR ranges
+        lwir_ranges = calculate_recognition_ranges(dim, mct.ifov, args.probability)
+        det_lwir = lwir_ranges[RecognitionTask.DETECTION] / 1000
+        rec_lwir = lwir_ranges[RecognitionTask.RECOGNITION] / 1000
+        id_lwir = lwir_ranges[RecognitionTask.IDENTIFICATION] / 1000
+
+        print("{:20} {:>10} {:>10.2f} {:>10.1f} {:>10.1f} {:>10.1f}  LWIR".format(
+            "", "", mct.ifov, det_lwir, rec_lwir, id_lwir))
+
+    print("-" * 80)
+
+    # Note about SNR vs resolution limits
+    print("\nNote: Actual detection ranges are limited by BOTH:")
+    print("  1. SNR (signal strength vs noise)")
+    print("  2. Resolution (Johnson criteria)")
+    print("  Effective range = min(SNR range, Resolution range)")
+
+
+def print_combined_analysis(insb, mct, targets, args):
+    """Print combined SNR and Johnson analysis."""
+    print("\n" + "=" * 80)
+    print("COMBINED SNR + JOHNSON ANALYSIS")
+    print("=" * 80)
+
+    print("\n{:20} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8}".format(
+        "Target", "SNR Det", "SNR Det", "Rec", "Rec", "ID", "ID"))
+    print("{:20} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8}".format(
+        "", "MWIR", "LWIR", "MWIR", "LWIR", "MWIR", "LWIR"))
+    print("-" * 80)
+
+    for name, target in targets:
+        dim = target.characteristic_dimension_m
+
+        # SNR-limited detection ranges
+        snr_mwir = calculate_detection_range_slant(
+            insb, target, args.sensor_altitude, args.target_altitude,
+            args.snr_threshold, args.visibility, args.humidity
+        ).detection_range_km
+
+        snr_lwir = calculate_detection_range_slant(
+            mct, target, args.sensor_altitude, args.target_altitude,
+            args.snr_threshold, args.visibility, args.humidity
+        ).detection_range_km
+
+        # Johnson recognition ranges
+        rec_mwir_raw = range_for_probability(dim, insb.ifov, RecognitionTask.RECOGNITION, args.probability) / 1000
+        rec_lwir_raw = range_for_probability(dim, mct.ifov, RecognitionTask.RECOGNITION, args.probability) / 1000
+        id_mwir_raw = range_for_probability(dim, insb.ifov, RecognitionTask.IDENTIFICATION, args.probability) / 1000
+        id_lwir_raw = range_for_probability(dim, mct.ifov, RecognitionTask.IDENTIFICATION, args.probability) / 1000
+
+        # Effective ranges (minimum of SNR and resolution)
+        rec_mwir = min(snr_mwir, rec_mwir_raw)
+        rec_lwir = min(snr_lwir, rec_lwir_raw)
+        id_mwir = min(snr_mwir, id_mwir_raw)
+        id_lwir = min(snr_lwir, id_lwir_raw)
+
+        print("{:20} {:>8.1f} {:>8.1f} {:>8.1f} {:>8.1f} {:>8.1f} {:>8.1f}".format(
+            name[:20], snr_mwir, snr_lwir, rec_mwir, rec_lwir, id_mwir, id_lwir))
+
+    print("-" * 80)
+    print("All ranges in km. Recognition requires 4 cycles, ID requires 6.4 cycles.")
+
+
 def main():
     args = parse_args()
+
+    # Check for YAML config
+    if args.config:
+        if not os.path.exists(args.config):
+            print(f"Error: Config file not found: {args.config}")
+            sys.exit(1)
+        scenario = load_scenario(args.config)
+        print(f"Loaded scenario: {scenario.name}")
+        print(f"Description: {scenario.description}")
+
+        # Create detectors and targets from config
+        detectors = [create_detector(d) for d in scenario.detectors]
+        targets = [(t.name, create_target(t)) for t in scenario.targets]
+
+        # Use scenario parameters
+        args.sensor_altitude = scenario.scenario.sensor_altitude_km
+        args.target_altitude = scenario.scenario.target_altitude_km
+        args.visibility = scenario.scenario.visibility_km
+        args.humidity = scenario.scenario.humidity_percent
+        args.snr_threshold = scenario.scenario.snr_threshold
+        args.probability = scenario.johnson_probability
+
+        # Check if Johnson analysis requested
+        if 'recognition_range' in scenario.analysis_types or 'johnson_probability' in scenario.analysis_types:
+            args.johnson = True
+
+        insb = detectors[0] if len(detectors) > 0 else InSbDetector()
+        mct = detectors[1] if len(detectors) > 1 else MCTDetector()
+    else:
+        # Create detectors
+        insb = InSbDetector(
+            name="InSb MWIR",
+            pixel_pitch=15.0,
+            f_number=2.0,
+            integration_time=10.0,
+        )
+
+        mct = MCTDetector(
+            name="MCT LWIR",
+            spectral_band=(8.0, 12.0),
+            pixel_pitch=20.0,
+            f_number=2.0,
+            integration_time=10.0,
+        )
+
+        targets = get_targets(args)
 
     print("=" * 70)
     print("FPA DETECTION RANGE COMPARISON")
     print("=" * 70)
 
-    # Create detectors
-    insb = InSbDetector(
-        name="InSb MWIR",
-        pixel_pitch=15.0,
-        f_number=2.0,
-        integration_time=10.0,
-    )
-
-    mct = MCTDetector(
-        name="MCT LWIR",
-        spectral_band=(8.0, 12.0),
-        pixel_pitch=20.0,
-        f_number=2.0,
-        integration_time=10.0,
-    )
-
-    # Create target
-    fighter = generic_fighter(
-        aspect=args.aspect,
-        afterburner=args.afterburner,
-        mach=0.9,
-    )
-
     # Print configuration
     print("\n" + "-" * 70)
     print("CONFIGURATION")
     print("-" * 70)
-    print(f"\nTarget: {fighter.name}")
-    print(f"  Aspect: {args.aspect}")
-    print(f"  Afterburner: {'Yes' if args.afterburner else 'No'}")
-    print(f"  Exhaust temp: {fighter.exhaust_temp:.0f} K")
-    print(f"  Exhaust area: {fighter.exhaust_area:.2f} m^2")
-    print(f"  Skin temp: {fighter.skin_temp:.0f} K")
-    print(f"  Skin area: {fighter.skin_area:.1f} m^2")
 
     print(f"\nGeometry:")
     print(f"  Sensor altitude: {args.sensor_altitude} km")
@@ -177,94 +342,71 @@ def main():
         print(f"  NEI: {det.noise_equivalent_irradiance():.2e} W/cm^2")
         print(f"  IFOV: {det.ifov:.2f} mrad")
 
-    # Calculate target signatures
+    # Print target info
     print("\n" + "-" * 70)
-    print("TARGET SIGNATURE")
+    print("TARGET SIGNATURES")
     print("-" * 70)
 
-    mwir_intensity = fighter.radiant_intensity_mwir()
-    lwir_intensity = fighter.radiant_intensity_lwir()
+    for name, target in targets:
+        print(f"\n{name}:")
+        print(f"  Exhaust temp: {target.exhaust_temp:.0f} K")
+        print(f"  Exhaust area: {target.exhaust_area:.2f} m^2")
+        print(f"  Skin temp: {target.skin_temp:.0f} K")
+        print(f"  Skin area: {target.skin_area:.1f} m^2")
+        print(f"  Characteristic dimension: {target.characteristic_dimension_m:.1f} m")
+        mwir_intensity = target.radiant_intensity_mwir()
+        lwir_intensity = target.radiant_intensity_lwir()
+        print(f"  MWIR intensity: {mwir_intensity:.1f} W/sr")
+        print(f"  LWIR intensity: {lwir_intensity:.1f} W/sr")
 
-    print(f"\nRadiant intensity:")
-    print(f"  MWIR (3-5 um): {mwir_intensity:.1f} W/sr")
-    print(f"  LWIR (8-12 um): {lwir_intensity:.1f} W/sr")
-    print(f"  MWIR/LWIR ratio: {mwir_intensity/lwir_intensity:.2f}")
-
-    # Atmospheric transmission comparison (using slant path)
+    # Detection range comparison
     print("\n" + "-" * 70)
-    print("ATMOSPHERIC TRANSMISSION (Slant Path)")
+    print("DETECTION RANGE COMPARISON (SNR-Limited)")
     print("-" * 70)
-    print(f"  Sensor at {args.sensor_altitude} km, Target at {args.target_altitude} km")
 
-    from raf_tran.detection import atmospheric_transmission_slant
+    print("\n{:25} {:>12} {:>12} {:>12}".format(
+        "Target", "MWIR (km)", "LWIR (km)", "Winner"))
+    print("-" * 65)
 
-    ranges_test = [1, 5, 10, 20, 50]
-    print(f"\n{'Slant Range':>12} {'MWIR (3-5um)':>15} {'LWIR (8-12um)':>15}")
-    print("-" * 45)
+    primary_target = targets[0][1]  # For later plots
 
-    for r in ranges_test:
-        trans_mwir = atmospheric_transmission_slant(
-            args.sensor_altitude, args.target_altitude, r,
-            3.0, 5.0, args.visibility, args.humidity
+    for name, target in targets:
+        result_insb = calculate_detection_range_slant(
+            insb, target,
+            args.sensor_altitude, args.target_altitude,
+            args.snr_threshold, args.visibility, args.humidity,
         )
-        trans_lwir = atmospheric_transmission_slant(
-            args.sensor_altitude, args.target_altitude, r,
-            8.0, 12.0, args.visibility, args.humidity
+
+        result_mct = calculate_detection_range_slant(
+            mct, target,
+            args.sensor_altitude, args.target_altitude,
+            args.snr_threshold, args.visibility, args.humidity,
         )
-        print(f"{r:>12} {trans_mwir:>14.1%} {trans_lwir:>14.1%}")
 
-    # Calculate detection ranges (with slant path geometry)
+        winner = "MWIR" if result_insb.detection_range_km > result_mct.detection_range_km else "LWIR"
+        print("{:25} {:>12.1f} {:>12.1f} {:>12}".format(
+            name[:25], result_insb.detection_range_km, result_mct.detection_range_km, winner))
+
+    # Johnson criteria analysis
+    if args.johnson:
+        print_johnson_analysis(insb, mct, targets, args)
+        print_combined_analysis(insb, mct, targets, args)
+
+    # SNR vs range analysis for primary target
     print("\n" + "-" * 70)
-    print("DETECTION RANGE CALCULATION (Slant Path)")
-    print("-" * 70)
-
-    result_insb = calculate_detection_range_slant(
-        insb, fighter,
-        args.sensor_altitude, args.target_altitude,
-        args.snr_threshold, args.visibility, args.humidity,
-    )
-
-    result_mct = calculate_detection_range_slant(
-        mct, fighter,
-        args.sensor_altitude, args.target_altitude,
-        args.snr_threshold, args.visibility, args.humidity,
-    )
-
-    print(f"\nInSb MWIR:")
-    print(f"  Detection range: {result_insb.detection_range_km:.1f} km")
-    print(f"  Atmospheric transmission: {result_insb.atmospheric_transmission:.1%}")
-    print(f"  Target irradiance: {result_insb.target_irradiance:.2e} W/cm^2")
-
-    print(f"\nMCT LWIR:")
-    print(f"  Detection range: {result_mct.detection_range_km:.1f} km")
-    print(f"  Atmospheric transmission: {result_mct.atmospheric_transmission:.1%}")
-    print(f"  Target irradiance: {result_mct.target_irradiance:.2e} W/cm^2")
-
-    # Determine winner
-    if result_insb.detection_range_km > result_mct.detection_range_km:
-        winner = "InSb MWIR"
-        advantage = result_insb.detection_range_km / max(result_mct.detection_range_km, 0.1)
-    else:
-        winner = "MCT LWIR"
-        advantage = result_mct.detection_range_km / max(result_insb.detection_range_km, 0.1)
-
-    print(f"\n*** {winner} provides {advantage:.1f}x longer detection range ***")
-
-    # SNR vs range analysis
-    print("\n" + "-" * 70)
-    print("SNR vs RANGE ANALYSIS")
+    print(f"SNR vs RANGE ANALYSIS: {targets[0][0]}")
     print("-" * 70)
 
     ranges = np.linspace(0.5, 50, 100)
     mean_alt = (args.sensor_altitude + args.target_altitude) / 2
 
     snr_insb, irrad_insb, trans_insb = calculate_snr_vs_range(
-        insb, fighter, ranges,
+        insb, primary_target, ranges,
         args.visibility, args.humidity, mean_alt,
     )
 
     snr_mct, irrad_mct, trans_mct = calculate_snr_vs_range(
-        mct, fighter, ranges,
+        mct, primary_target, ranges,
         args.visibility, args.humidity, mean_alt,
     )
 
@@ -293,39 +435,6 @@ LWIR (8-12 um) Advantages:
 - Less affected by solar glint
 - Better performance against low-signature targets
 - Wider atmospheric window
-
-For This Scenario:""")
-
-    if args.afterburner:
-        print("  - Afterburner greatly increases exhaust temperature (1800K)")
-        print("  - MWIR strongly favored due to hot plume emission")
-        print("  - Peak blackbody emission shifts toward MWIR")
-    else:
-        print("  - Military power exhaust at ~700K")
-        print("  - Both bands can detect, MWIR slightly favored for hot exhaust")
-        print("  - LWIR better for cooler skin signature")
-
-    if args.aspect == "front":
-        print("  - Front aspect minimizes exhaust visibility")
-        print("  - LWIR may perform better (skin dominates)")
-    elif args.aspect == "rear":
-        print("  - Rear aspect maximizes exhaust visibility")
-        print("  - MWIR strongly favored")
-
-    # Summary
-    print("\n" + "=" * 70)
-    print("SUMMARY")
-    print("=" * 70)
-    print(f"""
-Target: {fighter.name}
-Geometry: Sensor at {args.sensor_altitude} km, Target at {args.target_altitude} km
-Conditions: {args.visibility} km visibility, {args.humidity}% humidity
-
-Detection Ranges (SNR > {args.snr_threshold}):
-  InSb MWIR (3-5 um):  {result_insb.detection_range_km:>6.1f} km
-  MCT LWIR (8-12 um):  {result_mct.detection_range_km:>6.1f} km
-
-Winner: {winner} by {advantage:.1f}x
 """)
 
     # Altitude scan analysis
@@ -345,14 +454,14 @@ Winner: {winner} by {advantage:.1f}x
         # Scan for MWIR
         print("\nScanning InSb MWIR...")
         ranges_mwir = scan_altitude_performance(
-            insb, fighter, sensor_alts, target_alts,
+            insb, primary_target, sensor_alts, target_alts,
             args.snr_threshold, args.visibility, args.humidity
         )
 
         # Scan for LWIR
         print("Scanning MCT LWIR...")
         ranges_lwir = scan_altitude_performance(
-            mct, fighter, sensor_alts, target_alts,
+            mct, primary_target, sensor_alts, target_alts,
             args.snr_threshold, args.visibility, args.humidity
         )
 
@@ -404,18 +513,141 @@ Winner: {winner} by {advantage:.1f}x
             'ranges_lwir': ranges_lwir,
         }
 
+    # Summary
+    print("\n" + "=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+
+    # Get results for primary target
+    result_insb = calculate_detection_range_slant(
+        insb, primary_target,
+        args.sensor_altitude, args.target_altitude,
+        args.snr_threshold, args.visibility, args.humidity,
+    )
+    result_mct = calculate_detection_range_slant(
+        mct, primary_target,
+        args.sensor_altitude, args.target_altitude,
+        args.snr_threshold, args.visibility, args.humidity,
+    )
+
+    if result_insb.detection_range_km > result_mct.detection_range_km:
+        winner = "InSb MWIR"
+        advantage = result_insb.detection_range_km / max(result_mct.detection_range_km, 0.1)
+    else:
+        winner = "MCT LWIR"
+        advantage = result_mct.detection_range_km / max(result_insb.detection_range_km, 0.1)
+
+    print(f"""
+Primary Target: {targets[0][0]}
+Geometry: Sensor at {args.sensor_altitude} km, Target at {args.target_altitude} km
+Conditions: {args.visibility} km visibility, {args.humidity}% humidity
+
+SNR Detection Ranges (SNR > {args.snr_threshold}):
+  InSb MWIR (3-5 um):  {result_insb.detection_range_km:>6.1f} km
+  MCT LWIR (8-12 um):  {result_mct.detection_range_km:>6.1f} km
+
+Winner: {winner} by {advantage:.1f}x
+""")
+
+    if args.johnson:
+        dim = primary_target.characteristic_dimension_m
+        rec_mwir = min(result_insb.detection_range_km,
+                       range_for_probability(dim, insb.ifov, RecognitionTask.RECOGNITION, args.probability) / 1000)
+        rec_lwir = min(result_mct.detection_range_km,
+                       range_for_probability(dim, mct.ifov, RecognitionTask.RECOGNITION, args.probability) / 1000)
+
+        print(f"Recognition Ranges (P={args.probability:.0%}, min of SNR + Johnson):")
+        print(f"  MWIR Recognition: {rec_mwir:>6.1f} km")
+        print(f"  LWIR Recognition: {rec_lwir:>6.1f} km")
+
     # Plotting
     if not args.no_plot:
         try:
             import matplotlib.pyplot as plt
 
-            if altitude_scan_data is not None:
+            if args.johnson and not args.altitude_scan:
+                # Create figure with Johnson probability curves
+                fig = plt.figure(figsize=(16, 12))
+                fig.suptitle(
+                    f'FPA Detection Comparison: {targets[0][0]}\n'
+                    f'Sensor={args.sensor_altitude}km, Target={args.target_altitude}km, '
+                    f'Visibility={args.visibility}km',
+                    fontsize=14, fontweight='bold'
+                )
+
+                # Plot 1: SNR vs Range
+                ax1 = fig.add_subplot(2, 2, 1)
+                ax1.semilogy(ranges, snr_insb, 'b-', linewidth=2, label='InSb MWIR')
+                ax1.semilogy(ranges, snr_mct, 'r-', linewidth=2, label='MCT LWIR')
+                ax1.axhline(y=args.snr_threshold, color='k', linestyle='--',
+                           label=f'Threshold (SNR={args.snr_threshold})')
+                ax1.set_xlabel('Range (km)')
+                ax1.set_ylabel('SNR')
+                ax1.set_title('SNR vs Range')
+                ax1.legend(fontsize=9)
+                ax1.grid(True, alpha=0.3)
+                ax1.set_xlim(0, 50)
+
+                # Plot 2: Detection Range Bar Chart
+                ax2 = fig.add_subplot(2, 2, 2)
+                detectors = ['InSb\nMWIR', 'MCT\nLWIR']
+                det_ranges = [result_insb.detection_range_km, result_mct.detection_range_km]
+                colors = ['blue', 'red']
+                bars = ax2.bar(detectors, det_ranges, color=colors, alpha=0.7, edgecolor='black')
+                ax2.set_ylabel('Detection Range (km)')
+                ax2.set_title('Detection Range Comparison')
+                ax2.grid(True, alpha=0.3, axis='y')
+                for bar, val in zip(bars, det_ranges):
+                    ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                            f'{val:.1f}', ha='center', va='bottom', fontweight='bold')
+
+                # Plot 3: Johnson Probability Curves (MWIR)
+                ax3 = fig.add_subplot(2, 2, 3)
+                ranges_m = ranges * 1000
+                dim = primary_target.characteristic_dimension_m
+
+                for task in [RecognitionTask.DETECTION, RecognitionTask.RECOGNITION, RecognitionTask.IDENTIFICATION]:
+                    prob = calculate_probability_vs_range(dim, insb.ifov, ranges_m, task)
+                    ax3.plot(ranges, prob * 100, linewidth=2, label=f'{task.value.capitalize()}')
+
+                ax3.axhline(y=args.probability * 100, color='k', linestyle='--', alpha=0.5)
+                ax3.axvline(x=result_insb.detection_range_km, color='gray', linestyle=':', alpha=0.5,
+                           label=f'SNR limit ({result_insb.detection_range_km:.1f}km)')
+                ax3.set_xlabel('Range (km)')
+                ax3.set_ylabel('Probability (%)')
+                ax3.set_title(f'MWIR Johnson Probability ({dim:.0f}m target)')
+                ax3.legend(fontsize=9)
+                ax3.grid(True, alpha=0.3)
+                ax3.set_xlim(0, 50)
+                ax3.set_ylim(0, 100)
+
+                # Plot 4: Johnson Probability Curves (LWIR)
+                ax4 = fig.add_subplot(2, 2, 4)
+                for task in [RecognitionTask.DETECTION, RecognitionTask.RECOGNITION, RecognitionTask.IDENTIFICATION]:
+                    prob = calculate_probability_vs_range(dim, mct.ifov, ranges_m, task)
+                    ax4.plot(ranges, prob * 100, linewidth=2, label=f'{task.value.capitalize()}')
+
+                ax4.axhline(y=args.probability * 100, color='k', linestyle='--', alpha=0.5)
+                ax4.axvline(x=result_mct.detection_range_km, color='gray', linestyle=':', alpha=0.5,
+                           label=f'SNR limit ({result_mct.detection_range_km:.1f}km)')
+                ax4.set_xlabel('Range (km)')
+                ax4.set_ylabel('Probability (%)')
+                ax4.set_title(f'LWIR Johnson Probability ({dim:.0f}m target)')
+                ax4.legend(fontsize=9)
+                ax4.grid(True, alpha=0.3)
+                ax4.set_xlim(0, 50)
+                ax4.set_ylim(0, 100)
+
+                plt.tight_layout()
+                plt.savefig(args.output, dpi=150, bbox_inches='tight')
+                print(f"\nPlot saved to: {args.output}")
+
+            elif altitude_scan_data is not None:
                 # Create 3x2 figure with altitude scan heatmaps
                 fig = plt.figure(figsize=(16, 14))
                 fig.suptitle(
-                    f'FPA Detection Comparison: {fighter.name}\n'
-                    f'Sensor={args.sensor_altitude}km, Target={args.target_altitude}km, '
-                    f'Visibility={args.visibility}km',
+                    f'FPA Detection Comparison: {targets[0][0]}\n'
+                    f'Visibility={args.visibility}km, SNR threshold={args.snr_threshold}',
                     fontsize=14, fontweight='bold'
                 )
 
@@ -434,10 +666,10 @@ Winner: {winner} by {advantage:.1f}x
 
                 # Plot 2: Detection Range Bar Chart
                 ax2 = fig.add_subplot(3, 2, 2)
-                detectors = ['InSb\nMWIR', 'MCT\nLWIR']
+                detectors_names = ['InSb\nMWIR', 'MCT\nLWIR']
                 det_ranges = [result_insb.detection_range_km, result_mct.detection_range_km]
                 colors = ['blue', 'red']
-                bars = ax2.bar(detectors, det_ranges, color=colors, alpha=0.7, edgecolor='black')
+                bars = ax2.bar(detectors_names, det_ranges, color=colors, alpha=0.7, edgecolor='black')
                 ax2.set_ylabel('Detection Range (km)')
                 ax2.set_title('Detection Range Comparison')
                 ax2.grid(True, alpha=0.3, axis='y')
@@ -527,7 +759,7 @@ Winner: {winner} by {advantage:.1f}x
                 # Standard 2x2 plot without altitude scan
                 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
                 fig.suptitle(
-                    f'FPA Detection Comparison: {fighter.name}\n'
+                    f'FPA Detection Comparison: {targets[0][0]}\n'
                     f'Sensor={args.sensor_altitude}km, Target={args.target_altitude}km, '
                     f'Visibility={args.visibility}km',
                     fontsize=14, fontweight='bold'
@@ -584,10 +816,10 @@ Winner: {winner} by {advantage:.1f}x
 
                 # Plot 4: Detection Range Comparison Bar Chart
                 ax4 = axes[1, 1]
-                detectors = ['InSb\nMWIR', 'MCT\nLWIR']
+                detectors_names = ['InSb\nMWIR', 'MCT\nLWIR']
                 det_ranges = [result_insb.detection_range_km, result_mct.detection_range_km]
                 colors = ['blue', 'red']
-                bars = ax4.bar(detectors, det_ranges, color=colors, alpha=0.7, edgecolor='black')
+                bars = ax4.bar(detectors_names, det_ranges, color=colors, alpha=0.7, edgecolor='black')
                 ax4.set_ylabel('Detection Range (km)')
                 ax4.set_title(f'Detection Range Comparison (SNR > {args.snr_threshold})')
                 ax4.grid(True, alpha=0.3, axis='y')

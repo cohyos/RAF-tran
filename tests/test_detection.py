@@ -475,3 +475,246 @@ class TestIntegration:
 
         # Rear aspect should have longest range (most exhaust visible)
         assert result_rear.detection_range_km > result_front.detection_range_km
+
+
+# =============================================================================
+# Johnson Criteria Tests
+# =============================================================================
+
+from raf_tran.detection import (
+    RecognitionTask,
+    JOHNSON_CYCLES,
+    detection_probability,
+    cycles_on_target,
+    range_for_cycles,
+    range_for_probability,
+    calculate_recognition_ranges,
+    calculate_probability_vs_range,
+)
+
+
+class TestJohnsonCriteria:
+    """Tests for Johnson criteria functions."""
+
+    def test_johnson_cycles_values(self):
+        """Test Johnson cycle values are correct."""
+        assert JOHNSON_CYCLES[RecognitionTask.DETECTION] == 1.0
+        assert JOHNSON_CYCLES[RecognitionTask.ORIENTATION] == 1.4
+        assert JOHNSON_CYCLES[RecognitionTask.RECOGNITION] == 4.0
+        assert JOHNSON_CYCLES[RecognitionTask.IDENTIFICATION] == 6.4
+
+    def test_detection_probability_at_n50(self):
+        """Test probability is ~50% at N50 cycles."""
+        for task in RecognitionTask:
+            n50 = JOHNSON_CYCLES[task]
+            prob = detection_probability(n50, task)
+            assert 0.45 < prob < 0.55, f"Probability at N50 should be ~50% for {task}"
+
+    def test_detection_probability_increases_with_cycles(self):
+        """Test probability increases with more cycles."""
+        for task in RecognitionTask:
+            prob_low = detection_probability(0.5, task)
+            prob_mid = detection_probability(2.0, task)
+            prob_high = detection_probability(10.0, task)
+
+            assert prob_low < prob_mid < prob_high
+
+    def test_detection_probability_bounds(self):
+        """Test probability is always between 0 and 1."""
+        for cycles in [0.001, 0.1, 1.0, 5.0, 10.0, 100.0]:
+            for task in RecognitionTask:
+                prob = detection_probability(cycles, task)
+                assert 0 <= prob <= 1
+
+    def test_detection_probability_zero_cycles(self):
+        """Test probability is 0 at 0 cycles."""
+        for task in RecognitionTask:
+            prob = detection_probability(0, task)
+            assert prob == 0.0
+
+    def test_cycles_on_target_calculation(self):
+        """Test cycles on target calculation."""
+        # 15m target at 10km with 0.5 mrad IFOV
+        cycles = cycles_on_target(
+            target_dimension_m=15.0,
+            range_m=10000.0,
+            detector_ifov_mrad=0.5,
+        )
+        # Angular size = 15m / 10000m * 1000 = 1.5 mrad
+        # Cycles = 1.5 / (2 * 0.5) = 1.5
+        assert np.isclose(cycles, 1.5, rtol=0.01)
+
+    def test_cycles_decrease_with_range(self):
+        """Test cycles decrease with increasing range."""
+        cycles_near = cycles_on_target(15.0, 5000.0, 0.5)
+        cycles_far = cycles_on_target(15.0, 20000.0, 0.5)
+
+        assert cycles_near > cycles_far
+
+    def test_cycles_increase_with_target_size(self):
+        """Test cycles increase with larger target."""
+        cycles_small = cycles_on_target(5.0, 10000.0, 0.5)
+        cycles_large = cycles_on_target(50.0, 10000.0, 0.5)
+
+        assert cycles_large > cycles_small
+
+    def test_range_for_cycles_inverse(self):
+        """Test range_for_cycles is inverse of cycles_on_target."""
+        target_dim = 15.0
+        ifov = 0.5
+        cycles = 3.0
+
+        range_m = range_for_cycles(target_dim, ifov, cycles)
+        cycles_check = cycles_on_target(target_dim, range_m, ifov)
+
+        assert np.isclose(cycles_check, cycles, rtol=0.01)
+
+    def test_range_for_probability_at_50_percent(self):
+        """Test range_for_probability matches N50 at 50%."""
+        target_dim = 15.0
+        ifov = 0.5
+
+        for task in RecognitionTask:
+            range_m = range_for_probability(target_dim, ifov, task, probability=0.5)
+            cycles = cycles_on_target(target_dim, range_m, ifov)
+            n50 = JOHNSON_CYCLES[task]
+
+            # At 50% probability, cycles should equal N50
+            assert np.isclose(cycles, n50, rtol=0.01)
+
+    def test_higher_probability_shorter_range(self):
+        """Test higher probability requires shorter range."""
+        target_dim = 15.0
+        ifov = 0.5
+        task = RecognitionTask.RECOGNITION
+
+        range_50 = range_for_probability(target_dim, ifov, task, probability=0.5)
+        range_90 = range_for_probability(target_dim, ifov, task, probability=0.9)
+
+        assert range_90 < range_50
+
+    def test_calculate_recognition_ranges(self):
+        """Test calculate_recognition_ranges returns all tasks."""
+        target_dim = 15.0
+        ifov = 0.5
+
+        ranges = calculate_recognition_ranges(target_dim, ifov, probability=0.5)
+
+        # Should have all tasks
+        assert len(ranges) == len(RecognitionTask)
+        for task in RecognitionTask:
+            assert task in ranges
+            assert ranges[task] > 0
+
+    def test_recognition_ranges_ordered(self):
+        """Test recognition ranges are in expected order."""
+        target_dim = 15.0
+        ifov = 0.5
+
+        ranges = calculate_recognition_ranges(target_dim, ifov, probability=0.5)
+
+        # Detection should have longest range, identification shortest
+        assert ranges[RecognitionTask.DETECTION] > ranges[RecognitionTask.IDENTIFICATION]
+        assert ranges[RecognitionTask.ORIENTATION] > ranges[RecognitionTask.RECOGNITION]
+
+    def test_probability_vs_range_shape(self):
+        """Test probability vs range returns correct shape."""
+        ranges_m = np.linspace(1000, 50000, 50)
+        target_dim = 15.0
+        ifov = 0.5
+
+        probs = calculate_probability_vs_range(target_dim, ifov, ranges_m)
+
+        assert probs.shape == ranges_m.shape
+
+    def test_probability_vs_range_decreases(self):
+        """Test probability decreases with range."""
+        ranges_m = np.array([5000, 10000, 20000, 50000])
+        target_dim = 15.0
+        ifov = 0.5
+
+        probs = calculate_probability_vs_range(target_dim, ifov, ranges_m)
+
+        # Probability should decrease monotonically
+        for i in range(len(probs) - 1):
+            assert probs[i] >= probs[i + 1]
+
+
+class TestScenarioLoader:
+    """Tests for scenario loading functionality."""
+
+    def test_create_default_scenario(self):
+        """Test creating default scenario."""
+        from raf_tran.detection import create_default_scenario
+
+        scenario = create_default_scenario()
+
+        assert scenario.name
+        assert len(scenario.detectors) > 0
+        assert len(scenario.targets) > 0
+
+    def test_create_detector_from_config(self):
+        """Test creating detector from config."""
+        from raf_tran.detection import create_detector, DetectorConfig
+
+        config = DetectorConfig(
+            name="Test MWIR",
+            type="insb",
+            pixel_pitch=15.0,
+            f_number=2.0,
+        )
+
+        detector = create_detector(config)
+
+        assert detector.name == "Test MWIR"
+        assert detector.spectral_band == (3.0, 5.0)
+        assert detector.pixel_pitch == 15.0
+
+    def test_create_target_from_config(self):
+        """Test creating target from config."""
+        from raf_tran.detection import create_target, TargetConfig
+
+        config = TargetConfig(
+            name="Test Fighter",
+            type="fighter",
+            aspect="rear",
+            afterburner=True,
+        )
+
+        target = create_target(config)
+
+        assert target.name == "Test Fighter"
+        assert target.exhaust_temp > 1000  # Afterburner temp
+
+
+class TestCharacteristicDimension:
+    """Tests for characteristic dimension in aircraft signatures."""
+
+    def test_fighter_has_dimension(self):
+        """Test fighter has characteristic dimension."""
+        fighter = generic_fighter()
+        assert hasattr(fighter, 'characteristic_dimension_m')
+        assert fighter.characteristic_dimension_m == 15.0
+
+    def test_transport_larger_dimension(self):
+        """Test transport has larger dimension than fighter."""
+        fighter = generic_fighter()
+        transport = generic_transport()
+
+        assert transport.characteristic_dimension_m > fighter.characteristic_dimension_m
+
+    def test_uav_smaller_dimension(self):
+        """Test UAV has smaller dimension than fighter."""
+        fighter = generic_fighter()
+        uav = generic_uav()
+
+        assert uav.characteristic_dimension_m < fighter.characteristic_dimension_m
+
+    def test_dimension_preserved_with_aspect(self):
+        """Test dimension is preserved when changing aspect."""
+        base = generic_fighter(aspect="rear")
+        side = AircraftSignature.with_aspect(base, "side")
+        front = AircraftSignature.with_aspect(base, "front")
+
+        assert base.characteristic_dimension_m == side.characteristic_dimension_m
+        assert base.characteristic_dimension_m == front.characteristic_dimension_m
