@@ -57,6 +57,7 @@ EXAMPLES = [
     ("33_validation_visualization.py", "Physics Validation Visualization"),
     # Detection Applications
     ("34_fpa_detection_comparison.py", "FPA Detection Range Comparison"),
+    ("35_fpa_altitude_detection_study.py", "FPA Altitude Detection Study"),
 ]
 
 
