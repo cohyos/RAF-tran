@@ -81,6 +81,8 @@ EXAMPLES = [
     ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
     ("32_config_file_demo.py", "Configuration File Usage"),
     ("33_validation_visualization.py", "Physics Validation Visualization"),
+    # Detection Applications
+    ("34_fpa_detection_comparison.py", "FPA Detection Range Comparison"),
 ]
 
 
@@ -170,6 +172,7 @@ def find_plot_for_example(filename, work_dir):
         "31_limb_viewing_geometry.py": "limb_viewing.png",
         "32_config_file_demo.py": "config_file_demo.png",
         "33_validation_visualization.py": "validation_visualization.png",
+        "34_fpa_detection_comparison.py": "fpa_detection.png",
     }
 
     if filename in plot_mappings:

@@ -55,6 +55,8 @@ EXAMPLES = [
     ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
     ("32_config_file_demo.py", "Configuration File Usage"),
     ("33_validation_visualization.py", "Physics Validation Visualization"),
+    # Detection Applications
+    ("34_fpa_detection_comparison.py", "FPA Detection Range Comparison"),
 ]
 
 

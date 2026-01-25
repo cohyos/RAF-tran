@@ -49,10 +49,16 @@ The library implements modern computational techniques including:
 - **Turbulence spectra**: Kolmogorov and von Karman power spectra
 - Applications: Free-space optical communications, LIDAR, adaptive optics
 
-### Air Mass Calculations (NEW)
+### Air Mass Calculations
 - Chapman function for curved-Earth geometry at high solar zenith angles
 - Kasten-Young empirical formula accurate to 90 deg SZA
 - Automatic method selection based on conditions
+
+### IR Detection Systems (NEW)
+- **FPA Detectors**: InSb (MWIR) and MCT (LWIR) focal plane arrays
+- **Target Signatures**: Aircraft thermal models with aspect dependence
+- **Detection Range**: IR range equation with atmospheric transmission
+- Applications: IRST, missile warning, target acquisition
 
 ## Installation
 
@@ -226,7 +232,7 @@ else:
 
 ## Examples
 
-The `examples/` directory contains 31 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
+The `examples/` directory contains 34 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
 - Command-line arguments for customization
 - Detailed console output with explanations
 - Generated plots (requires matplotlib)
@@ -286,6 +292,12 @@ python 01_solar_zenith_angle_study.py --help
 | 32 | `config_file_demo.py` | YAML/JSON configuration file usage |
 | 33 | `validation_visualization.py` | Physics validation plots and comparisons |
 
+### Detection Applications (NEW)
+
+| # | Example | Description |
+|---|---------|-------------|
+| 34 | `fpa_detection_comparison.py` | MWIR vs LWIR FPA detection range comparison |
+
 ### Example Usage
 
 ```bash
@@ -319,6 +331,9 @@ python 31_limb_viewing_geometry.py --tangent-height 30
 
 # Configuration file usage
 python 32_config_file_demo.py --config configs/sample_simulation.yaml
+
+# FPA detection range comparison (NEW)
+python 34_fpa_detection_comparison.py --afterburner --aspect rear
 ```
 
 ## Configuration Files
@@ -372,10 +387,16 @@ raf_tran/
 ├── rte_solver/       # RTE solvers
 │   ├── two_stream.py # Two-stream approximation
 │   └── disort.py     # Discrete ordinates
-├── turbulence/       # Atmospheric optical turbulence (NEW)
+├── turbulence/       # Atmospheric optical turbulence
 │   ├── cn2_profiles.py  # Hufnagel-Valley, SLC models
 │   ├── propagation.py   # Fried parameter, scintillation
 │   └── kolmogorov.py    # Turbulence spectra
+├── detectors/        # IR detector models (NEW)
+│   └── fpa.py        # FPA detectors (InSb, MCT)
+├── targets/          # Target signature models (NEW)
+│   └── aircraft.py   # Aircraft IR signatures
+├── detection/        # Detection calculations (NEW)
+│   └── range_equation.py  # IR range equation
 └── utils/            # Utilities and constants
     ├── constants.py  # Physical constants
     ├── spectral.py   # Spectral functions
