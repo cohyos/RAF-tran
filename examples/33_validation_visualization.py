@@ -176,7 +176,7 @@ def validate_mie_rayleigh_limit():
     print("\nKey Observations:")
     print("- For x < 0.1, Mie matches Rayleigh formula within 5%")
     print("- Q_ext follows x^4 dependence (characteristic of Rayleigh)")
-    print("- Asymmetry parameter g → 0 for small particles (isotropic scattering)")
+    print("- Asymmetry parameter g -> 0 for small particles (isotropic scattering)")
     print("- As x increases, Mie deviates due to interference effects")
 
     return {'x': x_values, 'Q_mie': np.array(Q_ext_mie), 'Q_rayleigh': np.array(Q_ext_rayleigh)}
@@ -218,7 +218,7 @@ def validate_two_stream():
         print(f"{tau:<15.1f} {T_computed:<15.6f} {T_beer:<15.6f} {error:<10.3f}")
 
     # Test 2: Conservative scattering
-    print("\nTest 2: Conservative Scattering (ω = 1)")
+    print("\nTest 2: Conservative Scattering (omega = 1)")
     print("-" * 50)
 
     result = solver.solve_solar(
@@ -324,12 +324,12 @@ def create_validation_plots(atm_results, ray_results, mie_results, ts_results, o
         Q_ray = mie_results['Q_rayleigh']
 
         ax3.loglog(x, Q_mie, 'b-', linewidth=2, label='Mie Theory')
-        ax3.loglog(x, Q_ray, 'r--', linewidth=2, label='Rayleigh Approx: (8/3)x⁴|K|²')
+        ax3.loglog(x, Q_ray, 'r--', linewidth=2, label='Rayleigh Approx: (8/3)x^4|K|^2')
 
         ax3.set_xlabel('Size Parameter x = 2*pi*r/wavelength', fontsize=12)
         ax3.set_ylabel('Extinction Efficiency Q_ext', fontsize=12)
         ax3.set_title('Mie Scattering: Rayleigh Limit Validation\n'
-                      'Mie → Rayleigh as x → 0', fontsize=12, fontweight='bold')
+                      'Mie -> Rayleigh as x -> 0', fontsize=12, fontweight='bold')
         ax3.legend(loc='lower right')
         ax3.grid(True, alpha=0.3, which='both')
 
@@ -352,9 +352,9 @@ def create_validation_plots(atm_results, ray_results, mie_results, ts_results, o
         ax4.semilogy(tau, T_computed, 'bo-', markersize=10, linewidth=2,
                      label='Two-Stream Solver')
         ax4.semilogy(tau, T_theory, 'r--', linewidth=2,
-                     label='Beer-Lambert: exp(-τ/μ₀)')
+                     label='Beer-Lambert: exp(-tau/mu0)')
 
-        ax4.set_xlabel('Optical Depth τ', fontsize=12)
+        ax4.set_xlabel('Optical Depth tau', fontsize=12)
         ax4.set_ylabel('Direct Transmission', fontsize=12)
         ax4.set_title('Two-Stream Solver Validation\n'
                       'Beer-Lambert Law for Pure Absorption', fontsize=12, fontweight='bold')
@@ -362,7 +362,7 @@ def create_validation_plots(atm_results, ray_results, mie_results, ts_results, o
         ax4.grid(True, alpha=0.3)
 
         # Add physics annotation
-        ax4.text(2.5, 0.5, 'Pure absorption:\nT = exp(-τ/μ₀)', fontsize=10,
+        ax4.text(2.5, 0.5, 'Pure absorption:\nT = exp(-tau/mu0)', fontsize=10,
                  bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
         # =====================================================================
