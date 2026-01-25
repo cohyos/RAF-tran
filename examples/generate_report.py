@@ -45,6 +45,7 @@ except ImportError:
 
 
 EXAMPLES = [
+    # Core Examples (Demonstration)
     ("01_solar_zenith_angle_study.py", "Solar Zenith Angle Effects"),
     ("02_spectral_transmission.py", "Spectral Transmission (Sky Color)"),
     ("03_aerosol_types_comparison.py", "Aerosol Types Comparison"),
@@ -55,6 +56,31 @@ EXAMPLES = [
     ("08_ozone_uv_absorption.py", "Ozone UV Absorption"),
     ("09_radiative_heating_rates.py", "Radiative Heating Rates"),
     ("10_satellite_observation.py", "Satellite Observation Simulation"),
+    ("11_atmospheric_turbulence.py", "Atmospheric Turbulence (Cn2, Fried)"),
+    # Validation Examples (Physics Verification)
+    ("12_beer_lambert_validation.py", "Beer-Lambert Law Validation"),
+    ("13_planck_blackbody_validation.py", "Planck Blackbody Validation"),
+    ("14_rayleigh_scattering_validation.py", "Rayleigh Scattering Validation"),
+    ("15_mie_scattering_validation.py", "Mie Scattering Validation"),
+    ("16_two_stream_benchmarks.py", "Two-Stream Solver Benchmarks"),
+    ("17_solar_spectrum_analysis.py", "Solar Spectrum Analysis"),
+    ("18_thermal_emission_validation.py", "Thermal Emission Validation"),
+    ("19_path_radiance_remote_sensing.py", "Path Radiance Remote Sensing"),
+    ("20_visibility_contrast.py", "Visibility and Contrast"),
+    ("21_laser_propagation.py", "Laser Propagation"),
+    # Advanced Applications
+    ("22_atmospheric_polarization.py", "Atmospheric Polarization"),
+    ("23_infrared_atmospheric_windows.py", "IR Atmospheric Windows"),
+    ("24_volcanic_aerosol_forcing.py", "Volcanic Aerosol Forcing"),
+    ("25_water_vapor_feedback.py", "Water Vapor Feedback"),
+    ("26_high_altitude_solar.py", "High Altitude Solar Radiation"),
+    ("27_twilight_spectra.py", "Twilight Spectra"),
+    ("28_multi_layer_cloud.py", "Multi-Layer Cloud Overlap"),
+    ("29_aod_retrieval_visibility.py", "AOD Retrieval and Visibility"),
+    ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
+    ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
+    ("32_config_file_demo.py", "Configuration File Usage"),
+    ("33_validation_visualization.py", "Physics Validation Visualization"),
 ]
 
 
@@ -69,6 +95,10 @@ def parse_args():
     parser.add_argument(
         "--no-run", action="store_true",
         help="Don't run examples, just collect existing outputs"
+    )
+    parser.add_argument(
+        "--max-lines", type=int, default=0,
+        help="Max output lines per example (0 = unlimited, default: unlimited)"
     )
     return parser.parse_args()
 
@@ -117,6 +147,29 @@ def find_plot_for_example(filename, work_dir):
         "08_ozone_uv_absorption.py": "ozone_uv_absorption.png",
         "09_radiative_heating_rates.py": "radiative_heating_rates.png",
         "10_satellite_observation.py": "satellite_observation.png",
+        "11_atmospheric_turbulence.py": "atmospheric_turbulence.png",
+        "12_beer_lambert_validation.py": "beer_lambert_validation.png",
+        "13_planck_blackbody_validation.py": "planck_blackbody_validation.png",
+        "14_rayleigh_scattering_validation.py": "rayleigh_scattering_validation.png",
+        "15_mie_scattering_validation.py": "mie_scattering_validation.png",
+        "16_two_stream_benchmarks.py": "two_stream_benchmarks.png",
+        "17_solar_spectrum_analysis.py": "solar_spectrum_analysis.png",
+        "18_thermal_emission_validation.py": "thermal_emission_validation.png",
+        "19_path_radiance_remote_sensing.py": "path_radiance_remote_sensing.png",
+        "20_visibility_contrast.py": "visibility_contrast.png",
+        "21_laser_propagation.py": "laser_propagation.png",
+        "22_atmospheric_polarization.py": "atmospheric_polarization.png",
+        "23_infrared_atmospheric_windows.py": "infrared_atmospheric_windows.png",
+        "24_volcanic_aerosol_forcing.py": "volcanic_aerosol_forcing.png",
+        "25_water_vapor_feedback.py": "water_vapor_feedback.png",
+        "26_high_altitude_solar.py": "high_altitude_solar.png",
+        "27_twilight_spectra.py": "twilight_spectra.png",
+        "28_multi_layer_cloud.py": "multi_layer_cloud.png",
+        "29_aod_retrieval_visibility.py": "aod_visibility.png",
+        "30_spectral_surface_albedo.py": "spectral_albedo.png",
+        "31_limb_viewing_geometry.py": "limb_viewing.png",
+        "32_config_file_demo.py": "config_file_demo.png",
+        "33_validation_visualization.py": "validation_visualization.png",
     }
 
     if filename in plot_mappings:
@@ -134,8 +187,18 @@ def find_plot_for_example(filename, work_dir):
     return None
 
 
-def create_pdf_report(results, output_path):
-    """Create PDF report from results."""
+def create_pdf_report(results, output_path, max_lines=0):
+    """Create PDF report from results.
+
+    Parameters
+    ----------
+    results : list
+        List of (filename, description, output, success, plot_path) tuples
+    output_path : Path
+        Output PDF path
+    max_lines : int
+        Maximum lines per example output (0 = unlimited)
+    """
     if not REPORTLAB_AVAILABLE:
         print("ERROR: reportlab not available. Cannot create PDF.")
         print("Install with: pip install reportlab Pillow")
@@ -193,7 +256,7 @@ def create_pdf_report(results, output_path):
     # Summary table
     summary_data = [["#", "Example", "Status"]]
     for filename, description, output, success, plot_path in results:
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[X] FAIL"
         num = filename.split("_")[0]
         summary_data.append([num, description[:40], status])
 
@@ -238,13 +301,12 @@ def create_pdf_report(results, output_path):
             except Exception as e:
                 story.append(Paragraph(f"[Could not load plot: {e}]", styles['Normal']))
 
-        # Console output (truncated if too long)
+        # Console output (truncated if limit set)
         story.append(Paragraph("Console Output:", styles['Heading4']))
 
-        # Limit output length
-        max_lines = 80
+        # Limit output length (0 = unlimited)
         output_lines = output.split('\n')
-        if len(output_lines) > max_lines:
+        if max_lines > 0 and len(output_lines) > max_lines:
             truncated_output = '\n'.join(output_lines[:max_lines])
             truncated_output += f"\n\n... [{len(output_lines) - max_lines} more lines truncated]"
         else:
@@ -298,8 +360,8 @@ def main():
 
         plot_path = find_plot_for_example(filename, script_dir)
 
-        status = "✓" if success else "✗"
-        plot_status = "📊" if plot_path else "  "
+        status = "[OK]" if success else "[X]"
+        plot_status = "" if plot_path else "  "
         print(f"{status} {plot_status}")
 
         results.append((filename, description, output, success, plot_path))
@@ -308,10 +370,10 @@ def main():
     print("-" * 70)
     print("Generating PDF report...")
 
-    if create_pdf_report(results, pdf_path):
-        print(f"✓ Report saved to: {pdf_path}")
+    if create_pdf_report(results, pdf_path, max_lines=args.max_lines):
+        print(f"[OK] Report saved to: {pdf_path}")
     else:
-        print("✗ Failed to create PDF report")
+        print("[X] Failed to create PDF report")
 
         # Fallback: save text report
         txt_path = output_dir / f"raf_tran_examples_report_{timestamp}.txt"
@@ -331,7 +393,7 @@ def main():
                 f.write(output)
                 f.write("\n")
 
-        print(f"✓ Text report saved to: {txt_path}")
+        print(f"[OK] Text report saved to: {txt_path}")
 
     # List generated plots
     plots = list(script_dir.glob("*.png"))

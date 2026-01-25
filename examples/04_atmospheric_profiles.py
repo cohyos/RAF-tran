@@ -82,9 +82,9 @@ def calculate_column_amounts(atmosphere, z_levels):
     z_mid = (z_levels[:-1] + z_levels[1:]) / 2
     dz = np.diff(z_levels)
 
-    n_air = atmosphere.number_density(z_mid)  # molecules/m³
+    n_air = atmosphere.number_density(z_mid)  # molecules/m^3
 
-    # Column amounts in molecules/m²
+    # Column amounts in molecules/m^2
     h2o_col = np.sum(atmosphere.h2o_vmr(z_mid) * n_air * dz)
     o3_col = np.sum(atmosphere.o3_vmr(z_mid) * n_air * dz)
     co2_col = np.sum(atmosphere.co2_vmr(z_mid) * n_air * dz)
@@ -119,8 +119,8 @@ def main():
     print("\n" + "-" * 80)
     print("SURFACE CONDITIONS")
     print("-" * 80)
-    print(f"\n{'Profile':<22} {'T_surface':>12} {'P_surface':>12} {'ρ_surface':>12}")
-    print(f"{'':22} {'(K)':>12} {'(hPa)':>12} {'(kg/m³)':>12}")
+    print(f"\n{'Profile':<22} {'T_surface':>12} {'P_surface':>12} {'rho_surface':>12}")
+    print(f"{'':22} {'(K)':>12} {'(hPa)':>12} {'(kg/m^3)':>12}")
     print("-" * 80)
 
     for name, atm in profiles.items():
@@ -153,16 +153,16 @@ def main():
     print("\n" + "-" * 80)
     print("COLUMN AMOUNTS")
     print("-" * 80)
-    print(f"\n{'Profile':<22} {'H₂O':>14} {'O₃':>14} {'Precipitable':>14}")
-    print(f"{'':22} {'(molec/cm²)':>14} {'(DU)':>14} {'Water (cm)':>14}")
+    print(f"\n{'Profile':<22} {'H_2O':>14} {'O_3':>14} {'Precipitable':>14}")
+    print(f"{'':22} {'(molec/cm^2)':>14} {'(DU)':>14} {'Water (cm)':>14}")
     print("-" * 80)
 
     for name, atm in profiles.items():
         h2o_col, o3_col, _ = calculate_column_amounts(atm, z_levels)
-        # Convert to Dobson Units for ozone (1 DU = 2.687e16 molecules/cm²)
+        # Convert to Dobson Units for ozone (1 DU = 2.687e16 molecules/cm^2)
         o3_DU = o3_col / 1e4 / 2.687e16
         # Precipitable water (cm)
-        pw_cm = h2o_col * 18.015 / (6.022e23 * 1e4 * 1.0)  # g/cm² ≈ cm water
+        pw_cm = h2o_col * 18.015 / (6.022e23 * 1e4 * 1.0)  # g/cm^2 ~ cm water
         print(f"{name:<22} {h2o_col/1e4:>14.2e} {o3_DU:>14.1f} {pw_cm:>14.2f}")
 
     # Thermal radiation characteristics
@@ -170,7 +170,7 @@ def main():
     print("THERMAL RADIATION")
     print("-" * 80)
     print(f"\n{'Profile':<22} {'Surface Emission':>18} {'Effective T':>14}")
-    print(f"{'':22} {'(W/m²)':>18} {'(K)':>14}")
+    print(f"{'':22} {'(W/m^2)':>18} {'(K)':>14}")
     print("-" * 80)
 
     for name, atm in profiles.items():
@@ -225,7 +225,7 @@ def main():
             for name, atm in profiles.items():
                 rho = atm.density(z)
                 ax3.semilogy(rho, z/1000, label=name, color=colors[name], linewidth=2)
-            ax3.set_xlabel('Density (kg/m³)')
+            ax3.set_xlabel('Density (kg/m^3)')
             ax3.set_ylabel('Altitude (km)')
             ax3.set_title('Density Profiles')
             ax3.grid(True, alpha=0.3)
@@ -235,7 +235,7 @@ def main():
             for name, atm in profiles.items():
                 h2o = atm.h2o_vmr(z) * 1e6  # ppmv
                 ax4.semilogx(h2o, z/1000, label=name, color=colors[name], linewidth=2)
-            ax4.set_xlabel('H₂O VMR (ppmv)')
+            ax4.set_xlabel('H_2O VMR (ppmv)')
             ax4.set_ylabel('Altitude (km)')
             ax4.set_title('Water Vapor Profiles')
             ax4.grid(True, alpha=0.3)
@@ -246,7 +246,7 @@ def main():
             for name, atm in profiles.items():
                 o3 = atm.o3_vmr(z) * 1e6  # ppmv
                 ax5.plot(o3, z/1000, label=name, color=colors[name], linewidth=2)
-            ax5.set_xlabel('O₃ VMR (ppmv)')
+            ax5.set_xlabel('O_3 VMR (ppmv)')
             ax5.set_ylabel('Altitude (km)')
             ax5.set_title('Ozone Profiles')
             ax5.grid(True, alpha=0.3)
@@ -298,8 +298,8 @@ ATMOSPHERIC STRUCTURE:
    - Winter: Colder, drier, stronger inversions
 
 5. KEY QUANTITIES:
-   - Precipitable Water: Total column H₂O if condensed
-   - Dobson Units: Column O₃ (1 DU = 2.687e16 molecules/cm²)
+   - Precipitable Water: Total column H_2O if condensed
+   - Dobson Units: Column O_3 (1 DU = 2.687e16 molecules/cm^2)
    - Typical ozone: 200-400 DU
 """)
 

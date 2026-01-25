@@ -19,6 +19,7 @@ from pathlib import Path
 
 
 EXAMPLES = [
+    # Core Examples (Demonstration)
     ("01_solar_zenith_angle_study.py", "Solar Zenith Angle Effects"),
     ("02_spectral_transmission.py", "Spectral Transmission (Sky Color)"),
     ("03_aerosol_types_comparison.py", "Aerosol Types Comparison"),
@@ -29,6 +30,31 @@ EXAMPLES = [
     ("08_ozone_uv_absorption.py", "Ozone UV Absorption"),
     ("09_radiative_heating_rates.py", "Radiative Heating Rates"),
     ("10_satellite_observation.py", "Satellite Observation Simulation"),
+    ("11_atmospheric_turbulence.py", "Atmospheric Turbulence (Cn2, Fried)"),
+    # Validation Examples (Physics Verification)
+    ("12_beer_lambert_validation.py", "Beer-Lambert Law Validation"),
+    ("13_planck_blackbody_validation.py", "Planck Blackbody Validation"),
+    ("14_rayleigh_scattering_validation.py", "Rayleigh Scattering Validation"),
+    ("15_mie_scattering_validation.py", "Mie Scattering Validation"),
+    ("16_two_stream_benchmarks.py", "Two-Stream Solver Benchmarks"),
+    ("17_solar_spectrum_analysis.py", "Solar Spectrum Analysis"),
+    ("18_thermal_emission_validation.py", "Thermal Emission Validation"),
+    ("19_path_radiance_remote_sensing.py", "Path Radiance Remote Sensing"),
+    ("20_visibility_contrast.py", "Visibility and Contrast"),
+    ("21_laser_propagation.py", "Laser Propagation"),
+    # Advanced Applications
+    ("22_atmospheric_polarization.py", "Atmospheric Polarization"),
+    ("23_infrared_atmospheric_windows.py", "IR Atmospheric Windows"),
+    ("24_volcanic_aerosol_forcing.py", "Volcanic Aerosol Forcing"),
+    ("25_water_vapor_feedback.py", "Water Vapor Feedback"),
+    ("26_high_altitude_solar.py", "High Altitude Solar Radiation"),
+    ("27_twilight_spectra.py", "Twilight Spectra"),
+    ("28_multi_layer_cloud.py", "Multi-Layer Cloud Overlap"),
+    ("29_aod_retrieval_visibility.py", "AOD Retrieval and Visibility"),
+    ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
+    ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
+    ("32_config_file_demo.py", "Configuration File Usage"),
+    ("33_validation_visualization.py", "Physics Validation Visualization"),
 ]
 
 
@@ -117,12 +143,12 @@ def main():
             results.append((filename, success))
 
             if success:
-                print(f"\n✓ {filename} completed successfully")
+                print(f"\n[OK] {filename} completed successfully")
             else:
-                print(f"\n✗ {filename} exited with code {result.returncode}")
+                print(f"\n[X] {filename} exited with code {result.returncode}")
 
         except Exception as e:
-            print(f"\n✗ {filename} failed: {e}")
+            print(f"\n[X] {filename} failed: {e}")
             results.append((filename, False))
 
         if args.pause and i < len(examples_to_run):
@@ -137,7 +163,7 @@ def main():
     failed = len(results) - passed
 
     for filename, success in results:
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[X] FAIL"
         print(f"  {status}  {filename}")
 
     print("-" * 70)

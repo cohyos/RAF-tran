@@ -28,7 +28,7 @@ The library implements modern computational techniques including:
 
 ### Gas Absorption
 - Correlated-k distribution method
-- Support for major absorbing gases (H₂O, CO₂, O₃, etc.)
+- Support for major absorbing gases (H2O, CO2, O3, etc.)
 - Pressure and temperature dependent absorption coefficients
 
 ### Scattering
@@ -42,26 +42,75 @@ The library implements modern computational techniques including:
 - **Discrete ordinates (DISORT)**: Higher accuracy multi-stream solver
 - Solar (shortwave) and thermal (longwave) calculations
 
+### Atmospheric Turbulence (NEW)
+- **Cn2 profiles**: Hufnagel-Valley, SLC day/night models
+- **Beam propagation**: Fried parameter, scintillation index, Rytov variance
+- **Optical effects**: Beam wander, Strehl ratio, coherence time
+- **Turbulence spectra**: Kolmogorov and von Karman power spectra
+- Applications: Free-space optical communications, LIDAR, adaptive optics
+
+### Air Mass Calculations (NEW)
+- Chapman function for curved-Earth geometry at high solar zenith angles
+- Kasten-Young empirical formula accurate to 90 deg SZA
+- Automatic method selection based on conditions
+
 ## Installation
+
+### Quick Install
 
 ```bash
 # Clone the repository
 git clone https://github.com/cohyos/RAF-tran.git
 cd RAF-tran
 
-# Install in development mode
+# Install with all dependencies
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Installation Options
+
+```bash
+# Option 1: Minimal install (core functionality only)
 pip install -e .
 
-# Or install with development dependencies
+# Option 2: Full install with visualization and config support
+pip install -r requirements.txt
+pip install -e .
+
+# Option 3: Development install (includes testing and linting tools)
+pip install -r requirements.txt -r requirements-dev.txt
 pip install -e ".[dev]"
 ```
 
 ### Dependencies
 
+**Core (required):**
 - Python ≥ 3.9
 - NumPy ≥ 1.21
 - SciPy ≥ 1.7
-- JAX ≥ 0.4 (optional, for GPU acceleration)
+- JAX ≥ 0.4 (for GPU acceleration)
+
+**Visualization (recommended):**
+- Matplotlib ≥ 3.5
+
+**Configuration files (optional):**
+- PyYAML ≥ 6.0
+
+**PDF report generation (optional):**
+- ReportLab ≥ 4.0
+- Pillow ≥ 9.0
+
+### Verifying Installation
+
+```bash
+# Run tests to verify installation
+pytest
+
+# Run a quick example
+cd examples
+python 01_solar_zenith_angle_study.py --no-plot
+```
 
 ## Quick Start
 
@@ -127,17 +176,57 @@ from raf_tran.utils.spectral import planck_function, stefan_boltzmann_flux
 
 # Planck blackbody emission
 T = 300  # K
-wavelength = np.linspace(4e-6, 20e-6, 100)  # 4-20 μm
+wavelength = np.linspace(4e-6, 20e-6, 100)  # 4-20 um
 B = planck_function(wavelength, T)
 
 # Total blackbody flux
 flux = stefan_boltzmann_flux(T)
-print(f"Blackbody flux at {T} K: {flux:.1f} W/m²")
+print(f"Blackbody flux at {T} K: {flux:.1f} W/m^2")
+```
+
+### Atmospheric Turbulence (NEW)
+
+```python
+from raf_tran.turbulence import (
+    hufnagel_valley_cn2, slc_day_cn2,
+    fried_parameter, scintillation_index, rytov_variance
+)
+
+# Cn2 profile at different altitudes
+altitudes = [0, 100, 1000, 5000, 10000]
+for h in altitudes:
+    cn2 = hufnagel_valley_cn2(h)
+    print(f"Altitude {h}m: Cn2 = {cn2:.2e} m^(-2/3)")
+
+# Beam propagation parameters for laser link
+wavelength = 1.55e-6  # 1.55 um telecom laser
+cn2_avg = 1e-15       # Path-averaged Cn2
+path_length = 10000   # 10 km
+
+# Path-integrated Cn2
+cn2_integrated = cn2_avg * path_length
+
+# Fried parameter (atmospheric coherence length)
+r0 = fried_parameter(wavelength, cn2_integrated)
+print(f"Fried parameter: {r0*100:.1f} cm")
+
+# Scintillation index
+si = scintillation_index(wavelength, cn2_avg, path_length)
+print(f"Scintillation index: {si:.3f}")
+
+# Rytov variance (turbulence strength)
+sigma_r2 = rytov_variance(wavelength, cn2_avg, path_length)
+if sigma_r2 < 0.3:
+    print("Weak fluctuation regime")
+elif sigma_r2 < 5:
+    print("Moderate fluctuation regime")
+else:
+    print("Strong fluctuation (saturation)")
 ```
 
 ## Examples
 
-The `examples/` directory contains 10 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
+The `examples/` directory contains 31 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
 - Command-line arguments for customization
 - Detailed console output with explanations
 - Generated plots (requires matplotlib)
@@ -149,7 +238,7 @@ cd examples
 python 01_solar_zenith_angle_study.py --help
 ```
 
-### Available Examples
+### Core Examples (Demonstration)
 
 | # | Example | Description |
 |---|---------|-------------|
@@ -163,6 +252,39 @@ python 01_solar_zenith_angle_study.py --help
 | 08 | `ozone_uv_absorption.py` | Ozone layer and UV protection |
 | 09 | `radiative_heating_rates.py` | Atmospheric heating/cooling calculations |
 | 10 | `satellite_observation.py` | Simulate satellite remote sensing |
+| 11 | `atmospheric_turbulence.py` | Cn2 profiles and beam propagation |
+
+### Validation Examples (Physics Verification)
+
+| # | Example | Description |
+|---|---------|-------------|
+| 12 | `beer_lambert_validation.py` | Validate Beer-Lambert law implementation |
+| 13 | `planck_blackbody_validation.py` | Stefan-Boltzmann and Wien's law tests |
+| 14 | `rayleigh_scattering_validation.py` | Lambda^-4 dependence and literature comparison |
+| 15 | `mie_scattering_validation.py` | Rayleigh/geometric limits and energy conservation |
+| 16 | `two_stream_benchmarks.py` | Solver accuracy vs analytical solutions |
+| 17 | `solar_spectrum_analysis.py` | Solar irradiance and atmospheric windows |
+| 18 | `thermal_emission_validation.py` | Kirchhoff's law and OLR validation |
+| 19 | `path_radiance_remote_sensing.py` | Atmospheric correction for satellite imagery |
+| 20 | `visibility_contrast.py` | Koschmieder's law and contrast reduction |
+| 21 | `laser_propagation.py` | Combined absorption + turbulence effects |
+
+### Advanced Applications (NEW)
+
+| # | Example | Description |
+|---|---------|-------------|
+| 22 | `atmospheric_polarization.py` | Rayleigh/Mie polarization, sky polarization patterns |
+| 23 | `infrared_atmospheric_windows.py` | MWIR/LWIR transmission, EO-IR sensor design |
+| 24 | `volcanic_aerosol_forcing.py` | Pinatubo-type cooling, stratospheric sulfate |
+| 25 | `water_vapor_feedback.py` | Clausius-Clapeyron, climate sensitivity |
+| 26 | `high_altitude_solar.py` | Aviation/HAPS dosimetry, altitude effects |
+| 27 | `twilight_spectra.py` | Sunset/sunrise colors, Chappuis band |
+| 28 | `multi_layer_cloud.py` | Cloud overlap schemes (max, random, max-random) |
+| 29 | `aod_retrieval_visibility.py` | Langley calibration, AERONET-style AOD |
+| 30 | `spectral_surface_albedo.py` | Snow/ice, vegetation red edge, NDVI |
+| 31 | `limb_viewing_geometry.py` | Satellite limb sounding, onion-peeling retrieval |
+| 32 | `config_file_demo.py` | YAML/JSON configuration file usage |
+| 33 | `validation_visualization.py` | Physics validation plots and comparisons |
 
 ### Example Usage
 
@@ -181,7 +303,47 @@ python 07_cloud_radiative_effects.py --cloud-type Cirrus --sza 30
 
 # Ozone depletion impact on UV
 python 08_ozone_uv_absorption.py --ozone-column 200 --sza 45
+
+# Advanced examples (NEW):
+# IR atmospheric windows for EO sensor design
+python 23_infrared_atmospheric_windows.py --altitude 5 --water-vapor 1.0
+
+# Twilight spectra analysis
+python 27_twilight_spectra.py --sza 92
+
+# AOD retrieval and visibility
+python 29_aod_retrieval_visibility.py --aod 0.3 --angstrom 1.4
+
+# Limb viewing geometry for satellite missions
+python 31_limb_viewing_geometry.py --tangent-height 30
+
+# Configuration file usage
+python 32_config_file_demo.py --config configs/sample_simulation.yaml
 ```
+
+## Configuration Files
+
+RAF-tran supports YAML and JSON configuration files for reproducible simulation setups:
+
+```python
+from raf_tran.utils import load_config, validate_config, create_default_config
+
+# Load configuration from file
+config = load_config("simulation.yaml")
+
+# Validate configuration
+issues = validate_config(config)
+if issues:
+    print("Configuration issues:", issues)
+
+# Create default config template
+create_default_config("my_config.yaml")
+```
+
+Sample configuration files are provided in `examples/configs/`:
+- `sample_simulation.yaml` - Comprehensive example with all options
+- `cloudy_atmosphere.yaml` - Stratocumulus cloud scenario
+- `volcanic_scenario.json` - Post-volcanic eruption atmosphere (JSON format)
 
 ## Testing
 
@@ -210,9 +372,15 @@ raf_tran/
 ├── rte_solver/       # RTE solvers
 │   ├── two_stream.py # Two-stream approximation
 │   └── disort.py     # Discrete ordinates
+├── turbulence/       # Atmospheric optical turbulence (NEW)
+│   ├── cn2_profiles.py  # Hufnagel-Valley, SLC models
+│   ├── propagation.py   # Fried parameter, scintillation
+│   └── kolmogorov.py    # Turbulence spectra
 └── utils/            # Utilities and constants
     ├── constants.py  # Physical constants
-    └── spectral.py   # Spectral functions
+    ├── spectral.py   # Spectral functions
+    ├── air_mass.py   # Chapman function, air mass
+    └── config.py     # YAML/JSON configuration support (NEW)
 ```
 
 ## Scientific Background

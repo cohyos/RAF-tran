@@ -123,6 +123,7 @@ class TwoStreamSolver:
         temperature: np.ndarray,
         surface_temperature: float,
         surface_emissivity: float = 1.0,
+        levels_surface_to_toa: bool = True,
     ) -> TwoStreamResult:
         """
         Solve thermal (longwave) radiative transfer.
@@ -141,11 +142,14 @@ class TwoStreamSolver:
             Surface temperature in K
         surface_emissivity : float
             Surface emissivity (default: 1.0)
+        levels_surface_to_toa : bool
+            If True (default), input arrays are ordered from surface (index 0)
+            to TOA (index n). If False, they are ordered from TOA to surface.
 
         Returns
         -------
         result : TwoStreamResult
-            Radiative transfer results
+            Radiative transfer results (same ordering as input)
         """
         from raf_tran.utils.constants import STEFAN_BOLTZMANN
 
@@ -153,6 +157,14 @@ class TwoStreamSolver:
         omega = np.asarray(omega)
         g = np.asarray(g)
         temperature = np.asarray(temperature)
+
+        # Internal calculations assume TOA-to-surface ordering (index 0 = TOA)
+        # If input is surface-to-TOA, reverse the arrays
+        if levels_surface_to_toa:
+            tau = tau[::-1]
+            omega = omega[::-1]
+            g = g[::-1]
+            temperature = temperature[::-1]
 
         n_layers = len(tau)
         n_levels = n_layers + 1
@@ -227,6 +239,11 @@ class TwoStreamSolver:
             if np.max(np.abs(flux_up - flux_up_old)) < 1e-6:
                 break
 
+        # Reverse output to match input ordering if needed
+        if levels_surface_to_toa:
+            flux_up = flux_up[::-1]
+            flux_down = flux_down[::-1]
+
         return TwoStreamResult(
             flux_up=flux_up,
             flux_down=flux_down,
@@ -241,6 +258,7 @@ class TwoStreamSolver:
         mu0: float,
         flux_toa: float,
         surface_albedo: float = 0.0,
+        levels_surface_to_toa: bool = True,
     ) -> TwoStreamResult:
         """
         Solve solar (shortwave) radiative transfer.
@@ -259,15 +277,25 @@ class TwoStreamSolver:
             Incoming solar flux at TOA in W/m²
         surface_albedo : float
             Surface albedo (default: 0.0)
+        levels_surface_to_toa : bool
+            If True (default), input arrays are ordered from surface (index 0)
+            to TOA (index n). If False, they are ordered from TOA to surface.
 
         Returns
         -------
         result : TwoStreamResult
-            Radiative transfer results
+            Radiative transfer results (same ordering as input)
         """
         tau = np.asarray(tau)
         omega = np.asarray(omega)
         g = np.asarray(g)
+
+        # Internal calculations assume TOA-to-surface ordering
+        # If input is surface-to-TOA, reverse the arrays
+        if levels_surface_to_toa:
+            tau = tau[::-1]
+            omega = omega[::-1]
+            g = g[::-1]
 
         n_layers = len(tau)
         n_levels = n_layers + 1
@@ -312,7 +340,7 @@ class TwoStreamSolver:
             if tau_prime[i] < 1e-6:
                 # Optically thin limit
                 t[i] = 1 - tau_prime[i] * gamma1
-                r[i] = tau_prime[i] * gamma2
+                r[i] = tau_prime[i] * abs(gamma2)  # Use abs to ensure positive
 
                 # Solar source terms
                 source_factor = omega_prime[i] * flux_direct[i] * tau_prime[i]
@@ -320,10 +348,23 @@ class TwoStreamSolver:
                 source_down[i] = source_factor * gamma3
             else:
                 exp_k_tau = np.exp(-k * tau_prime[i])
-                denom = (k + gamma1) + (k - gamma1) * exp_k_tau**2
 
-                t[i] = 2 * k * exp_k_tau / denom
-                r[i] = (k - gamma1) * (1 - exp_k_tau**2) / denom
+                # Handle conservative scattering case (k -> 0)
+                # When gamma1^2 - gamma2^2 ~ 0, use asymptotic expansion
+                if k * tau_prime[i] < 0.01:
+                    # Conservative scattering limit
+                    # t ~ 1 / (1 + gamma1*tau), r ~ gamma1*tau / (1 + gamma1*tau)
+                    g1_tau = abs(gamma1) * tau_prime[i]
+                    t[i] = 1.0 / (1.0 + g1_tau)
+                    r[i] = g1_tau / (1.0 + g1_tau)
+                else:
+                    denom = (k + gamma1) + (k - gamma1) * exp_k_tau**2
+
+                    t[i] = 2 * k * exp_k_tau / denom
+                    r[i] = abs(k - gamma1) * (1 - exp_k_tau**2) / abs(denom)
+
+                    # Ensure physical bounds
+                    r[i] = max(0, min(r[i], 1 - t[i]))
 
                 # Solar source terms (simplified)
                 exp_tau_mu0 = np.exp(-tau_prime[i] / mu0)
@@ -332,14 +373,37 @@ class TwoStreamSolver:
                 alpha1 = gamma1 * gamma4 + gamma2 * gamma3
                 alpha2 = gamma1 * gamma3 + gamma2 * gamma4
 
-                source_up[i] = omega_term * (
-                    alpha1 * (1 - exp_tau_mu0 * exp_k_tau) / (k + 1 / mu0)
-                    + alpha2 * (exp_tau_mu0 - exp_k_tau) / (k - 1 / mu0 + 1e-10)
-                )
-                source_down[i] = omega_term * (
-                    alpha2 * (1 - exp_tau_mu0 * exp_k_tau) / (k + 1 / mu0)
-                    + alpha1 * (exp_tau_mu0 - exp_k_tau) / (k - 1 / mu0 + 1e-10)
-                )
+                # Handle singularity when k ~ 1/mu0
+                k_minus_inv_mu0 = k - 1 / mu0
+                if abs(k_minus_inv_mu0) < 1e-4:
+                    # Use L'Hopital's rule / Taylor expansion for singular case
+                    # (exp_tau_mu0 - exp_k_tau) / (k - 1/mu0) -> tau * exp(-tau/mu0)
+                    singular_term = tau_prime[i] * exp_tau_mu0
+                    source_up[i] = omega_term * (
+                        alpha1 * (1 - exp_tau_mu0 * exp_k_tau) / (k + 1 / mu0)
+                        + alpha2 * singular_term
+                    )
+                    source_down[i] = omega_term * (
+                        alpha2 * (1 - exp_tau_mu0 * exp_k_tau) / (k + 1 / mu0)
+                        + alpha1 * singular_term
+                    )
+                else:
+                    source_up[i] = omega_term * (
+                        alpha1 * (1 - exp_tau_mu0 * exp_k_tau) / (k + 1 / mu0)
+                        + alpha2 * (exp_tau_mu0 - exp_k_tau) / k_minus_inv_mu0
+                    )
+                    source_down[i] = omega_term * (
+                        alpha2 * (1 - exp_tau_mu0 * exp_k_tau) / (k + 1 / mu0)
+                        + alpha1 * (exp_tau_mu0 - exp_k_tau) / k_minus_inv_mu0
+                    )
+
+                # Apply energy conservation constraint: total scattered cannot exceed incident
+                max_source = omega_term * (1 - exp_tau_mu0)  # Max scattered energy
+                total_source = source_up[i] + source_down[i]
+                if total_source > max_source and total_source > 0:
+                    scale = max_source / total_source
+                    source_up[i] *= scale
+                    source_down[i] *= scale
 
         # Adding method: combine layers from top to bottom
         # Then solve for boundary conditions
@@ -365,6 +429,12 @@ class TwoStreamSolver:
             for i in range(n_layers - 1, -1, -1):
                 flux_up[i] = t[i] * flux_up[i + 1] + r[i] * flux_down[i] + source_up[i]
 
+        # Reverse output to match input ordering if needed
+        if levels_surface_to_toa:
+            flux_up = flux_up[::-1]
+            flux_down = flux_down[::-1]
+            flux_direct = flux_direct[::-1]
+
         return TwoStreamResult(
             flux_up=flux_up,
             flux_down=flux_down,
@@ -382,7 +452,9 @@ class TwoStreamSolver:
         """
         Compute heating rate from flux divergence.
 
-        dT/dt = -g/cp * d(F_net)/dp
+        dT/dt = (g/cp) * d(F_absorbed)/dp
+
+        where F_absorbed is the flux absorbed by each layer (energy deposited).
 
         Parameters
         ----------
@@ -404,16 +476,39 @@ class TwoStreamSolver:
         """
         from raf_tran.utils.constants import EARTH_SURFACE_GRAVITY
 
+        # Net flux (positive downward = energy entering from above)
         flux_net = flux_down + flux_direct - flux_up
 
-        # Flux divergence across each layer
-        d_flux = np.diff(flux_net)  # F_net(i+1) - F_net(i)
-        d_pressure = np.diff(pressure)  # P(i+1) - P(i)
+        n_layers = len(pressure) - 1
+        heating_rate = np.zeros(n_layers)
 
-        # Heating rate: dT/dt = -g/cp * dF/dp
-        heating_rate = (
-            -EARTH_SURFACE_GRAVITY / cp * d_flux / d_pressure
-        )
+        for i in range(n_layers):
+            # Energy absorbed by layer i = flux entering top - flux leaving bottom
+            # For layer between level i and i+1:
+            # Flux in from above = flux_net[i] (if pressure increases with index)
+            # or flux_net[i+1] (if pressure decreases with index)
+
+            # Determine pressure ordering
+            if pressure[0] > pressure[-1]:
+                # Pressure decreases with index: level 0 is surface, level n is TOA
+                # Flux absorbed = (flux entering from above) - (flux leaving below)
+                # = (F_down[i+1] + F_direct[i+1] - F_up[i+1]) - (F_down[i] + F_direct[i] - F_up[i])
+                flux_absorbed = flux_net[i+1] - flux_net[i]
+            else:
+                # Pressure increases with index: level 0 is TOA, level n is surface
+                flux_absorbed = flux_net[i] - flux_net[i+1]
+
+            # Mass of layer per unit area: dp/g
+            dp = abs(pressure[i+1] - pressure[i])
+            mass_per_area = dp / EARTH_SURFACE_GRAVITY
+
+            # Heating rate: dT/dt = absorbed_energy / (mass * cp)
+            # flux_absorbed is W/m^2 = J/s/m^2
+            # mass_per_area is kg/m^2
+            # cp is J/kg/K
+            # Result is K/s
+            if mass_per_area > 0:
+                heating_rate[i] = flux_absorbed / (mass_per_area * cp)
 
         # Convert from K/s to K/day
         heating_rate *= 86400

@@ -7,7 +7,7 @@ This example calculates the atmospheric transmission spectrum
 from UV to near-infrared wavelengths, showing how Rayleigh
 scattering causes the blue color of the sky.
 
-The strong wavelength dependence (λ⁻⁴) of Rayleigh scattering
+The strong wavelength dependence (lambda-^4) of Rayleigh scattering
 means shorter (blue) wavelengths are scattered much more than
 longer (red) wavelengths.
 
@@ -43,7 +43,7 @@ def parse_args():
         epilog="""
 Examples:
   %(prog)s                          # Default settings
-  %(prog)s --sza 60                 # Sun at 60° zenith angle
+  %(prog)s --sza 60                 # Sun at 60 deg zenith angle
   %(prog)s --altitude 3000          # Observer at 3000m elevation
   %(prog)s --wl-min 0.3 --wl-max 1.0  # Custom wavelength range
         """
@@ -58,11 +58,11 @@ Examples:
     )
     parser.add_argument(
         "--wl-min", type=float, default=0.3,
-        help="Minimum wavelength in μm (default: 0.3)"
+        help="Minimum wavelength in um (default: 0.3)"
     )
     parser.add_argument(
         "--wl-max", type=float, default=1.0,
-        help="Maximum wavelength in μm (default: 1.0)"
+        help="Maximum wavelength in um (default: 1.0)"
     )
     parser.add_argument(
         "--no-plot", action="store_true",
@@ -102,9 +102,9 @@ def main():
     print("=" * 70)
     print("SPECTRAL TRANSMISSION THROUGH THE ATMOSPHERE")
     print("=" * 70)
-    print(f"\nSolar zenith angle: {args.sza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
     print(f"Observer altitude: {args.altitude} m")
-    print(f"Wavelength range: {args.wl_min} - {args.wl_max} μm")
+    print(f"Wavelength range: {args.wl_min} - {args.wl_max} um")
 
     # Calculate air mass
     mu0 = np.cos(np.radians(args.sza))
@@ -141,12 +141,12 @@ def main():
     for i, wl in enumerate(wavelengths):
         tau = rayleigh.optical_depth(np.array([wl]), number_density, dz)
         tau_vertical[i] = np.sum(tau)
-        # Direct beam transmission: T = exp(-τ / μ₀)
+        # Direct beam transmission: T = exp(-tau / u0)
         transmission[i] = np.exp(-tau_vertical[i] / mu0)
 
     # Print key wavelength values
     key_wavelengths = [0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.70, 0.80, 1.00]
-    print(f"\n{'Wavelength':>12} {'Color':>10} {'τ_vertical':>12} {'τ_slant':>12} {'Transmission':>14}")
+    print(f"\n{'Wavelength':>12} {'Color':>10} {'tau_vertical':>12} {'tau_slant':>12} {'Transmission':>14}")
     print("-" * 70)
 
     color_names = {
@@ -175,15 +175,15 @@ def main():
     idx_red = np.argmin(np.abs(wavelengths - 0.65))
 
     tau_ratio = tau_vertical[idx_blue] / tau_vertical[idx_red]
-    scatter_ratio = (0.65 / 0.45) ** 4  # λ⁻⁴ dependence
+    scatter_ratio = (0.65 / 0.45) ** 4  # lambda-^4 dependence
 
     print("\n" + "-" * 70)
     print("WHY IS THE SKY BLUE?")
     print("-" * 70)
-    print(f"\nRayleigh scattering cross-section ∝ λ⁻⁴")
+    print(f"\nRayleigh scattering cross-section ~ lambda-^4")
     print(f"\nBlue (450nm) vs Red (650nm):")
-    print(f"  Theoretical ratio: (650/450)⁴ = {scatter_ratio:.2f}")
-    print(f"  Calculated τ ratio: {tau_ratio:.2f}")
+    print(f"  Theoretical ratio: (650/450)^4 = {scatter_ratio:.2f}")
+    print(f"  Calculated tau ratio: {tau_ratio:.2f}")
     print(f"\nBlue light is scattered {tau_ratio:.1f}x more than red light!")
     print("This scattered blue light is what we see as the blue sky.")
 
@@ -194,7 +194,7 @@ def main():
             from matplotlib.colors import LinearSegmentedColormap
 
             fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-            fig.suptitle(f'Spectral Transmission (SZA={args.sza}°, Alt={args.altitude}m)',
+            fig.suptitle(f'Spectral Transmission (SZA={args.sza} deg, Alt={args.altitude}m)',
                         fontsize=14, fontweight='bold')
 
             # Create spectrum colorbar
@@ -219,21 +219,21 @@ def main():
 
             # Plot 2: Optical depth spectrum
             ax2 = axes[0, 1]
-            ax2.semilogy(wavelengths * 1000, tau_vertical, 'b-', linewidth=2, label='Vertical τ')
+            ax2.semilogy(wavelengths * 1000, tau_vertical, 'b-', linewidth=2, label='Vertical tau')
             ax2.semilogy(wavelengths * 1000, tau_vertical / mu0, 'r--', linewidth=2,
-                        label=f'Slant τ (AM={air_mass:.1f})')
+                        label=f'Slant tau (AM={air_mass:.1f})')
             ax2.set_xlabel('Wavelength (nm)')
             ax2.set_ylabel('Optical Depth')
             ax2.set_title('Rayleigh Optical Depth vs Wavelength')
             ax2.legend()
             ax2.grid(True, alpha=0.3)
 
-            # Verify λ⁻⁴ dependence
+            # Verify lambda-^4 dependence
             wl_ref = 0.55
             tau_ref = tau_vertical[np.argmin(np.abs(wavelengths - wl_ref))]
             tau_theory = tau_ref * (wl_ref / wavelengths) ** 4
             ax2.semilogy(wavelengths * 1000, tau_theory, 'g:', linewidth=1,
-                        label='λ⁻⁴ fit', alpha=0.7)
+                        label='lambda-^4 fit', alpha=0.7)
             ax2.legend()
 
             # Plot 3: Scattering coefficient vs wavelength
@@ -241,7 +241,7 @@ def main():
             sigma = rayleigh.cross_section(wavelengths)
             ax3.loglog(wavelengths * 1000, sigma, 'b-', linewidth=2)
             ax3.set_xlabel('Wavelength (nm)')
-            ax3.set_ylabel('Cross Section (m²)')
+            ax3.set_ylabel('Cross Section (m^2)')
             ax3.set_title('Rayleigh Scattering Cross Section')
             ax3.grid(True, alpha=0.3)
 
@@ -281,7 +281,7 @@ def main():
     print("""
 RAYLEIGH SCATTERING AND SKY COLOR:
 
-1. WAVELENGTH DEPENDENCE: Rayleigh scattering cross-section σ ∝ λ⁻⁴
+1. WAVELENGTH DEPENDENCE: Rayleigh scattering cross-section sigma ~ lambda-^4
    - Blue light (450nm) scatters ~5x more than red light (650nm)
    - This selective scattering creates the blue sky
 
@@ -291,8 +291,8 @@ RAYLEIGH SCATTERING AND SKY COLOR:
    - The remaining direct light appears red/orange
 
 3. TRANSMISSION FORMULA:
-   - Direct beam: T = exp(-τ/μ₀) where μ₀ = cos(SZA)
-   - At high SZA, path length increases as 1/μ₀
+   - Direct beam: T = exp(-tau/u0) where u0 = cos(SZA)
+   - At high SZA, path length increases as 1/u0
 
 4. ALTITUDE EFFECTS:
    - Higher altitude = less atmosphere above = higher transmission
