@@ -262,8 +262,18 @@ Flux balance:
 Increasing optical depth from {tau1} to {tau2} (~CO_2 doubling equivalent):
   Temperature change: {T_s2 - T_s1:.1f} K
 
-This simple gray atmosphere model gives a climate sensitivity
-of ~{T_s2 - T_s1:.1f} K per CO_2 doubling (real Earth: ~2-4.5 K with feedbacks).
+IMPORTANT NOTE ON CLIMATE SENSITIVITY:
+  This gray atmosphere model gives {T_s2 - T_s1:.1f} K per "CO_2 doubling".
+
+  The REAL equilibrium climate sensitivity (ECS) is ~2.5-4 K because:
+  1. Gray model ignores spectral details (CO_2 absorbs only specific bands)
+  2. Gray model ignores water vapor feedback (amplifies warming by ~2x)
+  3. Gray model ignores cloud feedbacks (uncertain, +/- effects)
+  4. Gray model ignores ice-albedo feedback (amplifies warming)
+  5. The 50% tau increase here doesn't match actual CO_2 radiative forcing
+
+  Actual CO_2 doubling forcing: ~3.7 W/m^2 -> ~3 K warming (best estimate).
+  IPCC AR6 likely range: 2.5-4.0 K (very likely: 2.0-5.0 K)
 """)
 
     # Plotting
