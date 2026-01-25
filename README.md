@@ -56,24 +56,61 @@ The library implements modern computational techniques including:
 
 ## Installation
 
+### Quick Install
+
 ```bash
 # Clone the repository
 git clone https://github.com/cohyos/RAF-tran.git
 cd RAF-tran
 
-# Install in development mode
+# Install with all dependencies
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Installation Options
+
+```bash
+# Option 1: Minimal install (core functionality only)
 pip install -e .
 
-# Or install with development dependencies
+# Option 2: Full install with visualization and config support
+pip install -r requirements.txt
+pip install -e .
+
+# Option 3: Development install (includes testing and linting tools)
+pip install -r requirements.txt -r requirements-dev.txt
 pip install -e ".[dev]"
 ```
 
 ### Dependencies
 
+**Core (required):**
 - Python ≥ 3.9
 - NumPy ≥ 1.21
 - SciPy ≥ 1.7
-- JAX ≥ 0.4 (optional, for GPU acceleration)
+- JAX ≥ 0.4 (for GPU acceleration)
+
+**Visualization (recommended):**
+- Matplotlib ≥ 3.5
+
+**Configuration files (optional):**
+- PyYAML ≥ 6.0
+
+**PDF report generation (optional):**
+- ReportLab ≥ 4.0
+- Pillow ≥ 9.0
+
+### Verifying Installation
+
+```bash
+# Run tests to verify installation
+pytest
+
+# Run a quick example
+cd examples
+python 01_solar_zenith_angle_study.py --no-plot
+```
 
 ## Quick Start
 
