@@ -60,6 +60,19 @@ The library implements modern computational techniques including:
 - **Detection Range**: IR range equation with atmospheric transmission
 - Applications: IRST, missile warning, target acquisition
 
+### Digital LWIR Detection (NEW)
+- **DROIC Architecture**: Digital Read-Out IC with 4x well capacity (4.0e6 electrons)
+- **Low Noise**: 50 electrons RMS read noise (vs 150e analog) - 67% reduction
+- **SNR Enhancement**: ~1.4x improvement over analog LWIR
+- **3-Way Comparison**: InSb MWIR (analog) vs MCT LWIR (analog) vs Digital LWIR (DROIC)
+
+### Monte Carlo Simulation (NEW)
+- **Target Variations**: Temperature, area, emissivity distributions
+- **Sensor Variations**: D* (detectivity), read noise, dark current
+- **Atmospheric Variations**: Visibility, humidity, temperature
+- **Statistical Output**: Confidence intervals (p5, p25, p50, p75, p95)
+- **Distribution Types**: Uniform, normal, triangular, lognormal
+
 ## Installation
 
 ### Quick Install
@@ -298,6 +311,28 @@ python 01_solar_zenith_angle_study.py --help
 |---|---------|-------------|
 | 34 | `fpa_detection_comparison.py` | MWIR vs LWIR FPA detection range comparison |
 
+**Example 34 Features:**
+- 3-way comparison: InSb MWIR, MCT LWIR (analog), Digital LWIR (DROIC)
+- Monte Carlo uncertainty analysis with `--monte-carlo N`
+- Johnson criteria for detection probability
+- Slant path geometry with altitude parameters
+- YAML configuration file support
+
+**Usage:**
+```bash
+# 3-way detector comparison
+python 34_fpa_detection_comparison.py --detector all
+
+# Monte Carlo with 1000 samples
+python 34_fpa_detection_comparison.py --monte-carlo 1000 --seed 42
+
+# With Johnson criteria
+python 34_fpa_detection_comparison.py --detector all --johnson
+
+# From YAML config
+python 34_fpa_detection_comparison.py --config configs/detection_scenario.yaml
+```
+
 ### Example Usage
 
 ```bash
@@ -392,11 +427,14 @@ raf_tran/
 │   ├── propagation.py   # Fried parameter, scintillation
 │   └── kolmogorov.py    # Turbulence spectra
 ├── detectors/        # IR detector models (NEW)
-│   └── fpa.py        # FPA detectors (InSb, MCT)
+│   └── fpa.py        # FPA detectors (InSb, MCT, Digital LWIR)
 ├── targets/          # Target signature models (NEW)
 │   └── aircraft.py   # Aircraft IR signatures
 ├── detection/        # Detection calculations (NEW)
-│   └── range_equation.py  # IR range equation
+│   ├── range_equation.py   # IR range equation
+│   ├── johnson_criteria.py # Recognition probability
+│   ├── monte_carlo.py      # Monte Carlo simulation (NEW)
+│   └── scenario_loader.py  # YAML configuration
 └── utils/            # Utilities and constants
     ├── constants.py  # Physical constants
     ├── spectral.py   # Spectral functions
