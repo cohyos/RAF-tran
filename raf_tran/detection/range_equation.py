@@ -25,6 +25,189 @@ from raf_tran.detectors.fpa import FPADetector
 from raf_tran.targets.aircraft import AircraftSignature
 
 
+# =============================================================================
+# Geometry Functions
+# =============================================================================
+
+def slant_range_from_altitudes(
+    sensor_altitude_km: float,
+    target_altitude_km: float,
+    horizontal_range_km: float,
+) -> float:
+    """
+    Calculate slant range from sensor and target altitudes.
+
+    Parameters
+    ----------
+    sensor_altitude_km : float
+        Sensor altitude (km)
+    target_altitude_km : float
+        Target altitude (km)
+    horizontal_range_km : float
+        Horizontal (ground) range (km)
+
+    Returns
+    -------
+    slant_range_km : float
+        Slant range (km)
+    """
+    delta_h = abs(target_altitude_km - sensor_altitude_km)
+    slant_range = np.sqrt(horizontal_range_km**2 + delta_h**2)
+    return slant_range
+
+
+def elevation_angle(
+    sensor_altitude_km: float,
+    target_altitude_km: float,
+    horizontal_range_km: float,
+) -> float:
+    """
+    Calculate elevation angle from sensor to target.
+
+    Parameters
+    ----------
+    sensor_altitude_km : float
+        Sensor altitude (km)
+    target_altitude_km : float
+        Target altitude (km)
+    horizontal_range_km : float
+        Horizontal range (km)
+
+    Returns
+    -------
+    elevation_deg : float
+        Elevation angle (degrees), positive if looking up
+    """
+    delta_h = target_altitude_km - sensor_altitude_km
+    if horizontal_range_km == 0:
+        return 90.0 if delta_h > 0 else -90.0
+    elevation_rad = np.arctan2(delta_h, horizontal_range_km)
+    return np.degrees(elevation_rad)
+
+
+def mean_path_altitude(
+    sensor_altitude_km: float,
+    target_altitude_km: float,
+) -> float:
+    """
+    Calculate mean altitude along the path.
+
+    Parameters
+    ----------
+    sensor_altitude_km : float
+        Sensor altitude (km)
+    target_altitude_km : float
+        Target altitude (km)
+
+    Returns
+    -------
+    mean_alt_km : float
+        Mean path altitude (km)
+    """
+    return (sensor_altitude_km + target_altitude_km) / 2.0
+
+
+# =============================================================================
+# Atmospheric Transmission with Slant Path
+# =============================================================================
+
+def atmospheric_transmission_slant(
+    sensor_altitude_km: float,
+    target_altitude_km: float,
+    slant_range_km: float,
+    wavelength_min: float,
+    wavelength_max: float,
+    visibility_km: float = 23.0,
+    humidity_percent: float = 50.0,
+    n_segments: int = 10,
+) -> float:
+    """
+    Calculate atmospheric transmission along a slant path.
+
+    Integrates extinction along the path, accounting for
+    altitude-dependent atmospheric properties.
+
+    Parameters
+    ----------
+    sensor_altitude_km : float
+        Sensor altitude (km)
+    target_altitude_km : float
+        Target altitude (km)
+    slant_range_km : float
+        Slant range (km)
+    wavelength_min : float
+        Minimum wavelength (um)
+    wavelength_max : float
+        Maximum wavelength (um)
+    visibility_km : float
+        Surface meteorological visibility (km)
+    humidity_percent : float
+        Surface relative humidity (%)
+    n_segments : int
+        Number of path segments for integration
+
+    Returns
+    -------
+    transmission : float
+        Atmospheric transmission (0-1)
+    """
+    if slant_range_km <= 0:
+        return 1.0
+
+    center_wl = (wavelength_min + wavelength_max) / 2
+
+    # Divide path into segments
+    segment_length = slant_range_km / n_segments
+
+    # Altitude at each segment midpoint
+    alt_min = min(sensor_altitude_km, target_altitude_km)
+    alt_max = max(sensor_altitude_km, target_altitude_km)
+
+    total_optical_depth = 0.0
+
+    for i in range(n_segments):
+        # Fraction along path (0 to 1)
+        frac = (i + 0.5) / n_segments
+
+        # Altitude at this segment
+        if sensor_altitude_km <= target_altitude_km:
+            seg_alt = sensor_altitude_km + frac * (target_altitude_km - sensor_altitude_km)
+        else:
+            seg_alt = sensor_altitude_km - frac * (sensor_altitude_km - target_altitude_km)
+
+        # Altitude-dependent extinction
+        h_scale_aerosol = 1.2  # km scale height for aerosols
+        h_scale_h2o = 2.0      # km scale height for water vapor
+
+        # Aerosol extinction (decreases with altitude)
+        beta_aerosol_surface = 3.912 / visibility_km
+        beta_aerosol_surface *= (0.55 / center_wl) ** 0.5
+        beta_aerosol = beta_aerosol_surface * np.exp(-seg_alt / h_scale_aerosol)
+
+        # Water vapor (decreases with altitude)
+        humidity_factor = humidity_percent / 50.0 * np.exp(-seg_alt / h_scale_h2o)
+
+        if 3.0 <= center_wl <= 5.0:
+            beta_h2o = 0.1 * humidity_factor
+            beta_co2 = 0.02 if center_wl > 4.2 else 0.005
+        elif 8.0 <= center_wl <= 12.0:
+            beta_h2o = 0.05 * humidity_factor
+            beta_co2 = 0.01
+        else:
+            beta_h2o = 0.2 * humidity_factor
+            beta_co2 = 0.01
+
+        # CO2 also decreases with altitude (but slower)
+        beta_co2 *= np.exp(-seg_alt / 8.0)
+
+        # Total extinction for this segment
+        beta_total = beta_aerosol + beta_h2o + beta_co2
+        total_optical_depth += beta_total * segment_length
+
+    transmission = np.exp(-total_optical_depth)
+    return np.clip(transmission, 0.0, 1.0)
+
+
 @dataclass
 class DetectionResult:
     """
@@ -350,3 +533,177 @@ def compare_detectors(
         )
         results.append(result)
     return results
+
+
+# =============================================================================
+# Altitude-Aware Detection Functions
+# =============================================================================
+
+def calculate_detection_range_slant(
+    detector: FPADetector,
+    target: AircraftSignature,
+    sensor_altitude_km: float,
+    target_altitude_km: float,
+    snr_threshold: float = 5.0,
+    visibility_km: float = 23.0,
+    humidity_percent: float = 50.0,
+    max_range_km: float = 100.0,
+) -> DetectionResult:
+    """
+    Calculate maximum detection range with slant path geometry.
+
+    Parameters
+    ----------
+    detector : FPADetector
+        Detector specification
+    target : AircraftSignature
+        Target signature
+    sensor_altitude_km : float
+        Sensor platform altitude (km)
+    target_altitude_km : float
+        Target altitude (km)
+    snr_threshold : float
+        Required SNR for detection
+    visibility_km : float
+        Surface meteorological visibility (km)
+    humidity_percent : float
+        Surface relative humidity (%)
+    max_range_km : float
+        Maximum slant range to search (km)
+
+    Returns
+    -------
+    result : DetectionResult
+        Detection range and associated parameters
+    """
+    wl_min, wl_max = detector.spectral_band
+    nei = detector.noise_equivalent_irradiance()
+
+    def snr_minus_threshold(slant_range_km: float) -> float:
+        """SNR - threshold (zero at detection range)."""
+        if slant_range_km <= 0:
+            return 1e10
+
+        range_m = slant_range_km * 1000.0
+
+        trans = atmospheric_transmission_slant(
+            sensor_altitude_km, target_altitude_km, slant_range_km,
+            wl_min, wl_max, visibility_km, humidity_percent
+        )
+
+        irrad = target.irradiance_at_range(
+            range_m, wl_min, wl_max, trans
+        ) * 1e-4
+
+        snr = irrad / nei
+        return snr - snr_threshold
+
+    # Check if detection is possible at max range
+    snr_at_max = snr_minus_threshold(max_range_km) + snr_threshold
+    if snr_at_max >= snr_threshold:
+        range_m = max_range_km * 1000.0
+        trans = atmospheric_transmission_slant(
+            sensor_altitude_km, target_altitude_km, max_range_km,
+            wl_min, wl_max, visibility_km, humidity_percent
+        )
+        irrad = target.irradiance_at_range(
+            range_m, wl_min, wl_max, trans
+        ) * 1e-4
+
+        return DetectionResult(
+            detection_range_m=range_m,
+            snr_at_range=snr_at_max,
+            target_irradiance=irrad,
+            atmospheric_transmission=trans,
+        )
+
+    # Check if detection is possible at minimum range
+    min_range_km = 0.1
+    snr_at_min = snr_minus_threshold(min_range_km) + snr_threshold
+    if snr_at_min < snr_threshold:
+        return DetectionResult(
+            detection_range_m=0.0,
+            snr_at_range=snr_at_min,
+            target_irradiance=0.0,
+            atmospheric_transmission=1.0,
+        )
+
+    # Find detection range using root finding
+    try:
+        detection_range_km = brentq(
+            snr_minus_threshold,
+            min_range_km,
+            max_range_km,
+            xtol=0.01
+        )
+    except ValueError:
+        detection_range_km = max_range_km / 2
+
+    range_m = detection_range_km * 1000.0
+    trans = atmospheric_transmission_slant(
+        sensor_altitude_km, target_altitude_km, detection_range_km,
+        wl_min, wl_max, visibility_km, humidity_percent
+    )
+    irrad = target.irradiance_at_range(
+        range_m, wl_min, wl_max, trans
+    ) * 1e-4
+
+    return DetectionResult(
+        detection_range_m=range_m,
+        snr_at_range=snr_threshold,
+        target_irradiance=irrad,
+        atmospheric_transmission=trans,
+    )
+
+
+def scan_altitude_performance(
+    detector: FPADetector,
+    target: AircraftSignature,
+    sensor_altitudes_km: np.ndarray,
+    target_altitudes_km: np.ndarray,
+    snr_threshold: float = 5.0,
+    visibility_km: float = 23.0,
+    humidity_percent: float = 50.0,
+    max_range_km: float = 100.0,
+) -> np.ndarray:
+    """
+    Scan detection range across sensor and target altitude combinations.
+
+    Parameters
+    ----------
+    detector : FPADetector
+        Detector specification
+    target : AircraftSignature
+        Target signature
+    sensor_altitudes_km : np.ndarray
+        Array of sensor altitudes to scan (km)
+    target_altitudes_km : np.ndarray
+        Array of target altitudes to scan (km)
+    snr_threshold : float
+        Required SNR for detection
+    visibility_km : float
+        Surface visibility (km)
+    humidity_percent : float
+        Surface humidity (%)
+    max_range_km : float
+        Maximum range to search (km)
+
+    Returns
+    -------
+    detection_ranges : np.ndarray
+        2D array of detection ranges (km), shape (len(sensor_altitudes), len(target_altitudes))
+    """
+    n_sensor = len(sensor_altitudes_km)
+    n_target = len(target_altitudes_km)
+    detection_ranges = np.zeros((n_sensor, n_target))
+
+    for i, sensor_alt in enumerate(sensor_altitudes_km):
+        for j, target_alt in enumerate(target_altitudes_km):
+            result = calculate_detection_range_slant(
+                detector, target,
+                sensor_alt, target_alt,
+                snr_threshold, visibility_km, humidity_percent, max_range_km
+            )
+            detection_ranges[i, j] = result.detection_range_km
+
+    return detection_ranges
