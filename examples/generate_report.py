@@ -94,6 +94,10 @@ def parse_args():
         "--no-run", action="store_true",
         help="Don't run examples, just collect existing outputs"
     )
+    parser.add_argument(
+        "--max-lines", type=int, default=0,
+        help="Max output lines per example (0 = unlimited, default: unlimited)"
+    )
     return parser.parse_args()
 
 
@@ -179,8 +183,18 @@ def find_plot_for_example(filename, work_dir):
     return None
 
 
-def create_pdf_report(results, output_path):
-    """Create PDF report from results."""
+def create_pdf_report(results, output_path, max_lines=0):
+    """Create PDF report from results.
+
+    Parameters
+    ----------
+    results : list
+        List of (filename, description, output, success, plot_path) tuples
+    output_path : Path
+        Output PDF path
+    max_lines : int
+        Maximum lines per example output (0 = unlimited)
+    """
     if not REPORTLAB_AVAILABLE:
         print("ERROR: reportlab not available. Cannot create PDF.")
         print("Install with: pip install reportlab Pillow")
@@ -283,13 +297,12 @@ def create_pdf_report(results, output_path):
             except Exception as e:
                 story.append(Paragraph(f"[Could not load plot: {e}]", styles['Normal']))
 
-        # Console output (truncated if too long)
+        # Console output (truncated if limit set)
         story.append(Paragraph("Console Output:", styles['Heading4']))
 
-        # Limit output length
-        max_lines = 80
+        # Limit output length (0 = unlimited)
         output_lines = output.split('\n')
-        if len(output_lines) > max_lines:
+        if max_lines > 0 and len(output_lines) > max_lines:
             truncated_output = '\n'.join(output_lines[:max_lines])
             truncated_output += f"\n\n... [{len(output_lines) - max_lines} more lines truncated]"
         else:
@@ -353,7 +366,7 @@ def main():
     print("-" * 70)
     print("Generating PDF report...")
 
-    if create_pdf_report(results, pdf_path):
+    if create_pdf_report(results, pdf_path, max_lines=args.max_lines):
         print(f"[OK] Report saved to: {pdf_path}")
     else:
         print("[X] Failed to create PDF report")
