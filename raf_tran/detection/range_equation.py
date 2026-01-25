@@ -188,9 +188,12 @@ def atmospheric_transmission_slant(
         humidity_factor = humidity_percent / 50.0 * np.exp(-seg_alt / h_scale_h2o)
 
         if 3.0 <= center_wl <= 5.0:
-            beta_h2o = 0.1 * humidity_factor
-            beta_co2 = 0.02 if center_wl > 4.2 else 0.005
+            # MWIR 3-5um: Good atmospheric window, H2O absorption mainly at edges
+            # The 3.4-4.8um core is relatively clean
+            beta_h2o = 0.06 * humidity_factor
+            beta_co2 = 0.015 if center_wl > 4.2 else 0.005
         elif 8.0 <= center_wl <= 12.0:
+            # LWIR 8-12um: Very clean window, some ozone at 9.6um
             beta_h2o = 0.05 * humidity_factor
             beta_co2 = 0.01
         else:
@@ -288,11 +291,12 @@ def atmospheric_transmission_ir(
 
     # Molecular absorption coefficients (simplified, km^-1)
     if 3.0 <= center_wl <= 5.0:
-        # MWIR: Moderate H2O, some CO2 near edges
-        beta_h2o = 0.1 * humidity_factor
-        beta_co2 = 0.02 if center_wl > 4.2 else 0.005
+        # MWIR 3-5um: Good atmospheric window, H2O absorption mainly at edges
+        # The 3.4-4.8um core is relatively clean
+        beta_h2o = 0.06 * humidity_factor
+        beta_co2 = 0.015 if center_wl > 4.2 else 0.005
     elif 8.0 <= center_wl <= 12.0:
-        # LWIR: Less H2O absorption in window, O3 at 9.6 um
+        # LWIR 8-12um: Very clean window, some ozone at 9.6um
         beta_h2o = 0.05 * humidity_factor
         beta_co2 = 0.01
     else:
