@@ -41,6 +41,7 @@ Physical Principles:
 Usage:
     python 35_fpa_altitude_detection_study.py
     python 35_fpa_altitude_detection_study.py --target transport
+    python 35_fpa_altitude_detection_study.py --target all  # Compare all targets
     python 35_fpa_altitude_detection_study.py --afterburner
     python 35_fpa_altitude_detection_study.py --no-plot
 """
@@ -72,8 +73,8 @@ def parse_args():
     )
     parser.add_argument(
         "--target", type=str, default="fighter",
-        choices=["fighter", "transport", "uav"],
-        help="Target type (default: fighter)"
+        choices=["fighter", "transport", "uav", "all"],
+        help="Target type or 'all' for comparison (default: fighter)"
     )
     parser.add_argument(
         "--afterburner", action="store_true",
@@ -168,14 +169,32 @@ def create_study_detectors():
     return mwir, lwir_analog, lwir_digital
 
 
-def get_target(args):
-    """Get target based on arguments."""
-    if args.target == "fighter":
-        return generic_fighter(aspect="rear", afterburner=args.afterburner)
-    elif args.target == "transport":
+def get_target(target_type, afterburner=False):
+    """Get a single target based on type."""
+    if target_type == "fighter":
+        return generic_fighter(aspect="rear", afterburner=afterburner)
+    elif target_type == "transport":
         return generic_transport(aspect="rear")
-    elif args.target == "uav":
+    elif target_type == "uav":
         return generic_uav(aspect="rear")
+
+
+def get_targets(args):
+    """Get target(s) based on arguments. Returns dict of {name: target}."""
+    if args.target == "all":
+        targets = {
+            "Fighter": get_target("fighter", args.afterburner),
+            "Transport": get_target("transport"),
+            "UAV": get_target("uav"),
+        }
+        if args.afterburner:
+            targets["Fighter AB"] = get_target("fighter", afterburner=True)
+        return targets
+    else:
+        name = args.target.capitalize()
+        if args.afterburner and args.target == "fighter":
+            name += " AB"
+        return {name: get_target(args.target, args.afterburner)}
 
 
 def calculate_detection_matrix(detector, target, sensor_heights_m, target_heights_m,
@@ -315,19 +334,22 @@ def main():
         lwir_analog.noise_equivalent_irradiance(),
         lwir_digital.noise_equivalent_irradiance()))
 
-    # Get target
-    target = get_target(args)
-    target_name = f"{args.target.capitalize()}" + (" AB" if args.afterburner else "")
+    # Get targets (single or multiple)
+    targets = get_targets(args)
+    is_multi_target = len(targets) > 1
 
     print("\n" + "-" * 80)
-    print(f"TARGET: {target_name} (Rear Aspect)")
+    print(f"TARGET(S): {', '.join(targets.keys())} (Rear Aspect)")
     print("-" * 80)
-    print(f"  Exhaust temperature: {target.exhaust_temp:.0f} K")
-    print(f"  Exhaust area: {target.exhaust_area:.2f} m²")
-    print(f"  Skin temperature: {target.skin_temp:.0f} K")
-    print(f"  Skin area: {target.skin_area:.1f} m²")
-    print(f"  MWIR intensity: {target.radiant_intensity_mwir():.1f} W/sr")
-    print(f"  LWIR intensity: {target.radiant_intensity_lwir():.1f} W/sr")
+
+    for target_name, target in targets.items():
+        print(f"\n  {target_name}:")
+        print(f"    Exhaust temperature: {target.exhaust_temp:.0f} K")
+        print(f"    Exhaust area: {target.exhaust_area:.2f} m²")
+        print(f"    Skin temperature: {target.skin_temp:.0f} K")
+        print(f"    Skin area: {target.skin_area:.1f} m²")
+        print(f"    MWIR intensity: {target.radiant_intensity_mwir():.1f} W/sr")
+        print(f"    LWIR intensity: {target.radiant_intensity_lwir():.1f} W/sr")
 
     # Define altitude ranges
     target_heights_m = [0, 5000, 10000]  # Sea level, 5km, 10km
@@ -347,41 +369,54 @@ def main():
     print("CALCULATING DETECTION RANGES...")
     print("-" * 80)
 
-    results = {}
-    for det in detectors:
-        print(f"  Processing {det.name}...")
-        ranges = calculate_detection_matrix(
-            det, target, sensor_heights_m, target_heights_m,
-            args.snr_threshold, args.visibility, args.humidity
-        )
-        results[det.name] = ranges
+    # Results structure: {target_name: {detector_name: ranges_matrix}}
+    all_results = {}
+    for target_name, target in targets.items():
+        print(f"\n  Target: {target_name}")
+        all_results[target_name] = {}
+        for det in detectors:
+            print(f"    Processing {det.name}...")
+            ranges = calculate_detection_matrix(
+                det, target, sensor_heights_m, target_heights_m,
+                args.snr_threshold, args.visibility, args.humidity
+            )
+            all_results[target_name][det.name] = ranges
+
+    # For single target mode, also keep a flat 'results' dict for backward compatibility
+    first_target_name = list(targets.keys())[0]
+    results = all_results[first_target_name]
 
     # Print results tables
     print("\n" + "=" * 80)
     print("DETECTION RANGE RESULTS (km) - Slant Range")
     print("=" * 80)
 
-    for target_idx, target_height in enumerate(target_heights_m):
-        print(f"\n--- Target Height: {target_height} m ({target_height/1000:.0f} km) ---")
-        print("\n{:>12} {:>15} {:>15} {:>15} {:>12}".format(
-            "Sensor (m)", "MWIR", "LWIR Analog", "LWIR Digital", "Best"))
-        print("-" * 75)
+    for tgt_name, tgt_results in all_results.items():
+        print(f"\n{'=' * 80}")
+        print(f"TARGET: {tgt_name}")
+        print("=" * 80)
 
-        # Print selected sensor heights
-        for sensor_idx in [0, 4, 10, 16, 20, 26, 30]:  # 0, 2k, 5k, 8k, 10k, 13k, 15k
-            if sensor_idx >= len(sensor_heights_m):
-                continue
-            sensor_h = sensor_heights_m[sensor_idx]
-            r_mwir = results[mwir.name][sensor_idx, target_idx]
-            r_analog = results[lwir_analog.name][sensor_idx, target_idx]
-            r_digital = results[lwir_digital.name][sensor_idx, target_idx]
+        for target_idx, target_height in enumerate(target_heights_m):
+            print(f"\n--- Target Height: {target_height} m ({target_height/1000:.0f} km) ---")
+            print("\n{:>12} {:>15} {:>15} {:>15} {:>12}".format(
+                "Sensor (m)", "MWIR", "LWIR Analog", "LWIR Digital", "Best"))
+            print("-" * 75)
 
-            # Find best
-            ranges = [("MWIR", r_mwir), ("Analog", r_analog), ("Digital", r_digital)]
-            best_name, best_range = max(ranges, key=lambda x: x[1])
+            # Print selected sensor heights
+            for sensor_idx in [0, 4, 10, 16, 20, 26, 30]:  # 0, 2k, 5k, 8k, 10k, 13k, 15k
+                if sensor_idx >= len(sensor_heights_m):
+                    continue
+                sensor_h = sensor_heights_m[sensor_idx]
+                r_mwir = tgt_results[mwir.name][sensor_idx, target_idx]
+                r_analog = tgt_results[lwir_analog.name][sensor_idx, target_idx]
+                r_digital = tgt_results[lwir_digital.name][sensor_idx, target_idx]
 
-            print("{:>12,} {:>15.1f} {:>15.1f} {:>15.1f} {:>12}".format(
-                int(sensor_h), r_mwir, r_analog, r_digital, best_name))
+                # Find best
+                ranges_list = [("MWIR", r_mwir), ("Analog", r_analog), ("Digital", r_digital)]
+                best_name, best_range = max(ranges_list, key=lambda x: x[1])
+
+                print("{:>12,} {:>15.1f} {:>15.1f} {:>15.1f} {:>12}".format(
+                    int(sensor_h), r_mwir, r_analog, r_digital, best_name))
 
     # Print comparative analysis
     print("\n" + "=" * 80)
@@ -442,14 +477,16 @@ def main():
     print("SUMMARY")
     print("=" * 80)
 
-    # Find max ranges for each detector
+    # Find max ranges for each target and detector
     print("\nMaximum Detection Ranges Achieved:")
-    for det_name, ranges in results.items():
-        max_range = np.max(ranges)
-        max_idx = np.unravel_index(np.argmax(ranges), ranges.shape)
-        sensor_h = sensor_heights_m[max_idx[0]]
-        target_h = target_heights_m[max_idx[1]]
-        print(f"  {det_name}: {max_range:.1f} km (sensor={sensor_h/1000:.0f}km, target={target_h/1000:.0f}km)")
+    for tgt_name, tgt_results in all_results.items():
+        print(f"\n  {tgt_name}:")
+        for det_name, ranges in tgt_results.items():
+            max_range = np.max(ranges)
+            max_idx = np.unravel_index(np.argmax(ranges), ranges.shape)
+            sensor_h = sensor_heights_m[max_idx[0]]
+            target_h = target_heights_m[max_idx[1]]
+            print(f"    {det_name}: {max_range:.1f} km (sensor={sensor_h/1000:.0f}km, target={target_h/1000:.0f}km)")
 
     print(f"""
 Key Findings:
@@ -470,100 +507,200 @@ Recommended Applications:
         try:
             import matplotlib.pyplot as plt
 
-            fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-            fig.suptitle(
-                f'FPA Detection Range vs Sensor Altitude\n'
-                f'Target: {target_name}, Visibility={args.visibility}km, SNR>{args.snr_threshold}',
-                fontsize=14, fontweight='bold'
-            )
-
             colors = {'MWIR (InSb)': 'blue',
                      'LWIR Analog (MCT)': 'red',
                      'LWIR Digital (DROIC)': 'green'}
 
-            # Top row: Detection range vs sensor altitude for each target height
-            for idx, target_h in enumerate(target_heights_m):
-                ax = axes[0, idx]
-                for det_name, ranges in results.items():
-                    ax.plot(sensor_heights_m / 1000, ranges[:, idx],
-                           color=colors[det_name], linewidth=2, label=det_name)
+            if is_multi_target:
+                # Multi-target comparison plot
+                n_targets = len(targets)
+                fig, axes = plt.subplots(n_targets, 3, figsize=(16, 4 * n_targets))
+                if n_targets == 1:
+                    axes = axes.reshape(1, -1)
 
+                fig.suptitle(
+                    f'FPA Detection Range Comparison - All Targets\n'
+                    f'Visibility={args.visibility}km, SNR>{args.snr_threshold}',
+                    fontsize=14, fontweight='bold'
+                )
+
+                for row, (tgt_name, tgt_results) in enumerate(all_results.items()):
+                    # Column 1: Target at 0 km altitude
+                    for col, target_h in enumerate(target_heights_m):
+                        ax = axes[row, col]
+                        for det_name, det_ranges in tgt_results.items():
+                            ax.plot(sensor_heights_m / 1000, det_ranges[:, col],
+                                   color=colors[det_name], linewidth=2, label=det_name)
+
+                        ax.set_xlabel('Sensor Altitude (km)')
+                        ax.set_ylabel('Detection Range (km)')
+                        ax.set_title(f'{tgt_name} at {target_h/1000:.0f} km')
+                        if row == 0:
+                            ax.legend(fontsize=8)
+                        ax.grid(True, alpha=0.3)
+                        ax.set_xlim(0, 15)
+
+                plt.tight_layout()
+                plt.savefig(args.output, dpi=150, bbox_inches='tight')
+                print(f"\nPlot saved to: {args.output}")
+
+                # Also generate a summary comparison plot
+                summary_output = args.output.replace('.png', '_summary.png')
+                fig2, axes2 = plt.subplots(1, 3, figsize=(16, 5))
+                fig2.suptitle(
+                    f'Detection Range Summary by Target Type\n'
+                    f'Target Altitude=10km, Visibility={args.visibility}km, SNR>{args.snr_threshold}',
+                    fontsize=14, fontweight='bold'
+                )
+
+                target_colors = {
+                    'Fighter': 'C0', 'Fighter AB': 'C1',
+                    'Transport': 'C2', 'UAV': 'C3'
+                }
+                linestyles = {'MWIR (InSb)': '-', 'LWIR Analog (MCT)': '--', 'LWIR Digital (DROIC)': ':'}
+
+                # Plot 1: MWIR comparison across targets
+                ax = axes2[0]
+                for tgt_name, tgt_results in all_results.items():
+                    det_ranges = tgt_results[mwir.name]
+                    ax.plot(sensor_heights_m / 1000, det_ranges[:, 2],
+                           color=target_colors.get(tgt_name, 'gray'), linewidth=2, label=tgt_name)
                 ax.set_xlabel('Sensor Altitude (km)')
                 ax.set_ylabel('Detection Range (km)')
-                ax.set_title(f'Target at {target_h/1000:.0f} km')
+                ax.set_title('MWIR Detection by Target')
                 ax.legend(fontsize=8)
                 ax.grid(True, alpha=0.3)
                 ax.set_xlim(0, 15)
 
-            # Bottom row: Comparison metrics
-            # Plot 1: Digital vs Analog improvement
-            ax = axes[1, 0]
-            for idx, target_h in enumerate(target_heights_m):
-                improvement = []
-                for sensor_idx in range(len(sensor_heights_m)):
-                    r_analog = results[lwir_analog.name][sensor_idx, idx]
-                    r_digital = results[lwir_digital.name][sensor_idx, idx]
-                    if r_analog > 0:
-                        improvement.append((r_digital / r_analog - 1) * 100)
-                    else:
-                        improvement.append(0)
-                ax.plot(sensor_heights_m / 1000, improvement,
-                       linewidth=2, label=f'Target {target_h/1000:.0f}km')
-            ax.set_xlabel('Sensor Altitude (km)')
-            ax.set_ylabel('Improvement (%)')
-            ax.set_title('Digital LWIR vs Analog LWIR')
-            ax.legend(fontsize=8)
-            ax.grid(True, alpha=0.3)
-            ax.set_xlim(0, 15)
+                # Plot 2: LWIR Digital comparison across targets
+                ax = axes2[1]
+                for tgt_name, tgt_results in all_results.items():
+                    det_ranges = tgt_results[lwir_digital.name]
+                    ax.plot(sensor_heights_m / 1000, det_ranges[:, 2],
+                           color=target_colors.get(tgt_name, 'gray'), linewidth=2, label=tgt_name)
+                ax.set_xlabel('Sensor Altitude (km)')
+                ax.set_ylabel('Detection Range (km)')
+                ax.set_title('Digital LWIR Detection by Target')
+                ax.legend(fontsize=8)
+                ax.grid(True, alpha=0.3)
+                ax.set_xlim(0, 15)
 
-            # Plot 2: MWIR/LWIR ratio
-            ax = axes[1, 1]
-            for idx, target_h in enumerate(target_heights_m):
-                ratio = []
-                for sensor_idx in range(len(sensor_heights_m)):
-                    r_mwir = results[mwir.name][sensor_idx, idx]
-                    r_digital = results[lwir_digital.name][sensor_idx, idx]
-                    if r_digital > 0:
-                        ratio.append(r_mwir / r_digital)
-                    else:
-                        ratio.append(0)
-                ax.plot(sensor_heights_m / 1000, ratio,
-                       linewidth=2, label=f'Target {target_h/1000:.0f}km')
-            ax.set_xlabel('Sensor Altitude (km)')
-            ax.set_ylabel('Range Ratio (MWIR/Digital LWIR)')
-            ax.set_title('MWIR vs Digital LWIR')
-            ax.axhline(y=1.0, color='k', linestyle='--', alpha=0.5)
-            ax.legend(fontsize=8)
-            ax.grid(True, alpha=0.3)
-            ax.set_xlim(0, 15)
+                # Plot 3: Max ranges bar chart
+                ax = axes2[2]
+                x = np.arange(len(targets))
+                width = 0.25
+                det_names = [mwir.name, lwir_analog.name, lwir_digital.name]
 
-            # Plot 3: Best detector at each altitude
-            ax = axes[1, 2]
-            target_h = 10000  # Focus on 10km target
-            idx = 2
-            r_mwir = results[mwir.name][:, idx]
-            r_analog = results[lwir_analog.name][:, idx]
-            r_digital = results[lwir_digital.name][:, idx]
+                for i, det_name in enumerate(det_names):
+                    max_ranges = [np.max(tgt_results[det_name]) for tgt_results in all_results.values()]
+                    bars = ax.bar(x + (i - 1) * width, max_ranges, width,
+                                 label=det_name, color=list(colors.values())[i])
 
-            ax.fill_between(sensor_heights_m / 1000, 0, r_mwir,
-                           alpha=0.3, color='blue', label='MWIR')
-            ax.fill_between(sensor_heights_m / 1000, 0, r_digital,
-                           alpha=0.3, color='green', label='Digital LWIR')
-            ax.fill_between(sensor_heights_m / 1000, 0, r_analog,
-                           alpha=0.3, color='red', label='Analog LWIR')
-            ax.plot(sensor_heights_m / 1000, r_mwir, 'b-', linewidth=2)
-            ax.plot(sensor_heights_m / 1000, r_digital, 'g-', linewidth=2)
-            ax.plot(sensor_heights_m / 1000, r_analog, 'r-', linewidth=2)
-            ax.set_xlabel('Sensor Altitude (km)')
-            ax.set_ylabel('Detection Range (km)')
-            ax.set_title(f'Range Comparison (Target at 10 km)')
-            ax.legend(fontsize=8)
-            ax.grid(True, alpha=0.3)
-            ax.set_xlim(0, 15)
+                ax.set_xlabel('Target Type')
+                ax.set_ylabel('Max Detection Range (km)')
+                ax.set_title('Maximum Detection Range')
+                ax.set_xticks(x)
+                ax.set_xticklabels(list(targets.keys()), rotation=15)
+                ax.legend(fontsize=7)
+                ax.grid(True, alpha=0.3, axis='y')
 
-            plt.tight_layout()
-            plt.savefig(args.output, dpi=150, bbox_inches='tight')
-            print(f"\nPlot saved to: {args.output}")
+                plt.tight_layout()
+                plt.savefig(summary_output, dpi=150, bbox_inches='tight')
+                print(f"Summary plot saved to: {summary_output}")
+
+            else:
+                # Single target plot (original 2x3 layout)
+                first_target = list(targets.keys())[0]
+                fig, axes = plt.subplots(2, 3, figsize=(16, 10))
+                fig.suptitle(
+                    f'FPA Detection Range vs Sensor Altitude\n'
+                    f'Target: {first_target}, Visibility={args.visibility}km, SNR>{args.snr_threshold}',
+                    fontsize=14, fontweight='bold'
+                )
+
+                # Top row: Detection range vs sensor altitude for each target height
+                for idx, target_h in enumerate(target_heights_m):
+                    ax = axes[0, idx]
+                    for det_name, det_ranges in results.items():
+                        ax.plot(sensor_heights_m / 1000, det_ranges[:, idx],
+                               color=colors[det_name], linewidth=2, label=det_name)
+
+                    ax.set_xlabel('Sensor Altitude (km)')
+                    ax.set_ylabel('Detection Range (km)')
+                    ax.set_title(f'Target at {target_h/1000:.0f} km')
+                    ax.legend(fontsize=8)
+                    ax.grid(True, alpha=0.3)
+                    ax.set_xlim(0, 15)
+
+                # Bottom row: Comparison metrics
+                # Plot 1: Digital vs Analog improvement
+                ax = axes[1, 0]
+                for idx, target_h in enumerate(target_heights_m):
+                    improvement = []
+                    for sensor_idx in range(len(sensor_heights_m)):
+                        r_analog = results[lwir_analog.name][sensor_idx, idx]
+                        r_digital = results[lwir_digital.name][sensor_idx, idx]
+                        if r_analog > 0:
+                            improvement.append((r_digital / r_analog - 1) * 100)
+                        else:
+                            improvement.append(0)
+                    ax.plot(sensor_heights_m / 1000, improvement,
+                           linewidth=2, label=f'Target {target_h/1000:.0f}km')
+                ax.set_xlabel('Sensor Altitude (km)')
+                ax.set_ylabel('Improvement (%)')
+                ax.set_title('Digital LWIR vs Analog LWIR')
+                ax.legend(fontsize=8)
+                ax.grid(True, alpha=0.3)
+                ax.set_xlim(0, 15)
+
+                # Plot 2: MWIR/LWIR ratio
+                ax = axes[1, 1]
+                for idx, target_h in enumerate(target_heights_m):
+                    ratio = []
+                    for sensor_idx in range(len(sensor_heights_m)):
+                        r_mwir = results[mwir.name][sensor_idx, idx]
+                        r_digital = results[lwir_digital.name][sensor_idx, idx]
+                        if r_digital > 0:
+                            ratio.append(r_mwir / r_digital)
+                        else:
+                            ratio.append(0)
+                    ax.plot(sensor_heights_m / 1000, ratio,
+                           linewidth=2, label=f'Target {target_h/1000:.0f}km')
+                ax.set_xlabel('Sensor Altitude (km)')
+                ax.set_ylabel('Range Ratio (MWIR/Digital LWIR)')
+                ax.set_title('MWIR vs Digital LWIR')
+                ax.axhline(y=1.0, color='k', linestyle='--', alpha=0.5)
+                ax.legend(fontsize=8)
+                ax.grid(True, alpha=0.3)
+                ax.set_xlim(0, 15)
+
+                # Plot 3: Best detector at each altitude
+                ax = axes[1, 2]
+                target_h = 10000  # Focus on 10km target
+                idx = 2
+                r_mwir = results[mwir.name][:, idx]
+                r_analog = results[lwir_analog.name][:, idx]
+                r_digital = results[lwir_digital.name][:, idx]
+
+                ax.fill_between(sensor_heights_m / 1000, 0, r_mwir,
+                               alpha=0.3, color='blue', label='MWIR')
+                ax.fill_between(sensor_heights_m / 1000, 0, r_digital,
+                               alpha=0.3, color='green', label='Digital LWIR')
+                ax.fill_between(sensor_heights_m / 1000, 0, r_analog,
+                               alpha=0.3, color='red', label='Analog LWIR')
+                ax.plot(sensor_heights_m / 1000, r_mwir, 'b-', linewidth=2)
+                ax.plot(sensor_heights_m / 1000, r_digital, 'g-', linewidth=2)
+                ax.plot(sensor_heights_m / 1000, r_analog, 'r-', linewidth=2)
+                ax.set_xlabel('Sensor Altitude (km)')
+                ax.set_ylabel('Detection Range (km)')
+                ax.set_title(f'Range Comparison (Target at 10 km)')
+                ax.legend(fontsize=8)
+                ax.grid(True, alpha=0.3)
+                ax.set_xlim(0, 15)
+
+                plt.tight_layout()
+                plt.savefig(args.output, dpi=150, bbox_inches='tight')
+                print(f"\nPlot saved to: {args.output}")
 
         except ImportError:
             print("\nNote: matplotlib not available for plotting")
