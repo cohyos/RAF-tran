@@ -59,6 +59,16 @@ from raf_tran.turbulence.kolmogorov import (
     kolmogorov_spectrum,
     von_karman_spectrum,
     structure_function,
+    # Phase-aware functions
+    phase_structure_function,
+    coherence_function,
+    phase_variance,
+    tilt_removed_phase_variance,
+    angle_of_arrival_variance,
+    zernike_variance,
+    phase_power_spectrum,
+    residual_phase_variance_ao,
+    long_exposure_strehl,
 )
 
 __all__ = [
@@ -81,4 +91,14 @@ __all__ = [
     "kolmogorov_spectrum",
     "von_karman_spectrum",
     "structure_function",
+    # Phase-aware functions
+    "phase_structure_function",
+    "coherence_function",
+    "phase_variance",
+    "tilt_removed_phase_variance",
+    "angle_of_arrival_variance",
+    "zernike_variance",
+    "phase_power_spectrum",
+    "residual_phase_variance_ao",
+    "long_exposure_strehl",
 ]

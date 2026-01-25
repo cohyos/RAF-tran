@@ -28,7 +28,7 @@ The library implements modern computational techniques including:
 
 ### Gas Absorption
 - Correlated-k distribution method
-- Support for major absorbing gases (H₂O, CO₂, O₃, etc.)
+- Support for major absorbing gases (H2O, CO2, O3, etc.)
 - Pressure and temperature dependent absorption coefficients
 
 ### Scattering
@@ -41,6 +41,18 @@ The library implements modern computational techniques including:
   - Eddington, quadrature, hemispheric mean, and delta-Eddington methods
 - **Discrete ordinates (DISORT)**: Higher accuracy multi-stream solver
 - Solar (shortwave) and thermal (longwave) calculations
+
+### Atmospheric Turbulence (NEW)
+- **Cn2 profiles**: Hufnagel-Valley, SLC day/night models
+- **Beam propagation**: Fried parameter, scintillation index, Rytov variance
+- **Optical effects**: Beam wander, Strehl ratio, coherence time
+- **Turbulence spectra**: Kolmogorov and von Karman power spectra
+- Applications: Free-space optical communications, LIDAR, adaptive optics
+
+### Air Mass Calculations (NEW)
+- Chapman function for curved-Earth geometry at high solar zenith angles
+- Kasten-Young empirical formula accurate to 90 deg SZA
+- Automatic method selection based on conditions
 
 ## Installation
 
@@ -127,17 +139,57 @@ from raf_tran.utils.spectral import planck_function, stefan_boltzmann_flux
 
 # Planck blackbody emission
 T = 300  # K
-wavelength = np.linspace(4e-6, 20e-6, 100)  # 4-20 μm
+wavelength = np.linspace(4e-6, 20e-6, 100)  # 4-20 um
 B = planck_function(wavelength, T)
 
 # Total blackbody flux
 flux = stefan_boltzmann_flux(T)
-print(f"Blackbody flux at {T} K: {flux:.1f} W/m²")
+print(f"Blackbody flux at {T} K: {flux:.1f} W/m^2")
+```
+
+### Atmospheric Turbulence (NEW)
+
+```python
+from raf_tran.turbulence import (
+    hufnagel_valley_cn2, slc_day_cn2,
+    fried_parameter, scintillation_index, rytov_variance
+)
+
+# Cn2 profile at different altitudes
+altitudes = [0, 100, 1000, 5000, 10000]
+for h in altitudes:
+    cn2 = hufnagel_valley_cn2(h)
+    print(f"Altitude {h}m: Cn2 = {cn2:.2e} m^(-2/3)")
+
+# Beam propagation parameters for laser link
+wavelength = 1.55e-6  # 1.55 um telecom laser
+cn2_avg = 1e-15       # Path-averaged Cn2
+path_length = 10000   # 10 km
+
+# Path-integrated Cn2
+cn2_integrated = cn2_avg * path_length
+
+# Fried parameter (atmospheric coherence length)
+r0 = fried_parameter(wavelength, cn2_integrated)
+print(f"Fried parameter: {r0*100:.1f} cm")
+
+# Scintillation index
+si = scintillation_index(wavelength, cn2_avg, path_length)
+print(f"Scintillation index: {si:.3f}")
+
+# Rytov variance (turbulence strength)
+sigma_r2 = rytov_variance(wavelength, cn2_avg, path_length)
+if sigma_r2 < 0.3:
+    print("Weak fluctuation regime")
+elif sigma_r2 < 5:
+    print("Moderate fluctuation regime")
+else:
+    print("Strong fluctuation (saturation)")
 ```
 
 ## Examples
 
-The `examples/` directory contains 10 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
+The `examples/` directory contains 21 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
 - Command-line arguments for customization
 - Detailed console output with explanations
 - Generated plots (requires matplotlib)
@@ -149,7 +201,7 @@ cd examples
 python 01_solar_zenith_angle_study.py --help
 ```
 
-### Available Examples
+### Core Examples (Demonstration)
 
 | # | Example | Description |
 |---|---------|-------------|
@@ -163,6 +215,22 @@ python 01_solar_zenith_angle_study.py --help
 | 08 | `ozone_uv_absorption.py` | Ozone layer and UV protection |
 | 09 | `radiative_heating_rates.py` | Atmospheric heating/cooling calculations |
 | 10 | `satellite_observation.py` | Simulate satellite remote sensing |
+| 11 | `atmospheric_turbulence.py` | Cn2 profiles and beam propagation (NEW) |
+
+### Validation Examples (Physics Verification)
+
+| # | Example | Description |
+|---|---------|-------------|
+| 12 | `beer_lambert_validation.py` | Validate Beer-Lambert law implementation |
+| 13 | `planck_blackbody_validation.py` | Stefan-Boltzmann and Wien's law tests |
+| 14 | `rayleigh_scattering_validation.py` | Lambda^-4 dependence and literature comparison |
+| 15 | `mie_scattering_validation.py` | Rayleigh/geometric limits and energy conservation |
+| 16 | `two_stream_benchmarks.py` | Solver accuracy vs analytical solutions |
+| 17 | `solar_spectrum_analysis.py` | Solar irradiance and atmospheric windows |
+| 18 | `thermal_emission_validation.py` | Kirchhoff's law and OLR validation |
+| 19 | `path_radiance_remote_sensing.py` | Atmospheric correction for satellite imagery |
+| 20 | `visibility_contrast.py` | Koschmieder's law and contrast reduction |
+| 21 | `laser_propagation.py` | Combined absorption + turbulence effects |
 
 ### Example Usage
 
@@ -210,9 +278,14 @@ raf_tran/
 ├── rte_solver/       # RTE solvers
 │   ├── two_stream.py # Two-stream approximation
 │   └── disort.py     # Discrete ordinates
+├── turbulence/       # Atmospheric optical turbulence (NEW)
+│   ├── cn2_profiles.py  # Hufnagel-Valley, SLC models
+│   ├── propagation.py   # Fried parameter, scintillation
+│   └── kolmogorov.py    # Turbulence spectra
 └── utils/            # Utilities and constants
     ├── constants.py  # Physical constants
-    └── spectral.py   # Spectral functions
+    ├── spectral.py   # Spectral functions
+    └── air_mass.py   # Chapman function, air mass (NEW)
 ```
 
 ## Scientific Background
