@@ -12,10 +12,15 @@ Sensor Technologies:
    - Excellent for hot target detection (exhaust plumes)
    - Requires cooling to 77K
 
-2. MCT (HgCdTe) - LWIR (8-12 um)
+2. MCT (HgCdTe) - LWIR (8-12 um) Analog
    - Peak sensitivity at ambient temperatures
    - Better for detecting cooler skin temperatures
    - Also requires cryogenic cooling
+
+3. Digital LWIR (DROIC) - LWIR (8-12 um) Digital (NEW)
+   - Digital Read-Out IC with 4x well capacity (4.0e6 electrons)
+   - 50e RMS read noise (vs 150e analog) - 67% reduction
+   - ~1.7-1.9x SNR improvement over analog LWIR
 
 Features:
 - SNR-based detection range calculations
@@ -24,6 +29,8 @@ Features:
 - YAML configuration file support
 - Slant path atmospheric transmission
 - Altitude scan analysis
+- Monte Carlo uncertainty analysis with confidence intervals (NEW)
+- 3-way detector comparison: InSb MWIR, MCT LWIR (analog), Digital LWIR (DROIC) (NEW)
 
 Usage:
     python 34_fpa_detection_comparison.py
@@ -31,6 +38,8 @@ Usage:
     python 34_fpa_detection_comparison.py --target all --johnson
     python 34_fpa_detection_comparison.py --config configs/detection_scenario.yaml
     python 34_fpa_detection_comparison.py --altitude-scan
+    python 34_fpa_detection_comparison.py --detector all  # 3-way comparison
+    python 34_fpa_detection_comparison.py --monte-carlo 1000 --seed 42  # Monte Carlo
 """
 
 import argparse
@@ -41,7 +50,7 @@ import os
 sys.path.insert(0, '..')
 
 try:
-    from raf_tran.detectors import InSbDetector, MCTDetector
+    from raf_tran.detectors import InSbDetector, MCTDetector, DigitalLWIRDetector
     from raf_tran.targets import generic_fighter, generic_transport, generic_uav
     from raf_tran.detection import (
         calculate_detection_range,
@@ -63,6 +72,12 @@ try:
         load_scenario,
         create_detector,
         create_target,
+        # Monte Carlo
+        MonteCarloConfig,
+        MonteCarloResult,
+        monte_carlo_detection_range,
+        monte_carlo_multi_detector,
+        default_monte_carlo_config,
     )
 except ImportError as e:
     print(f"Error: Could not import raf_tran modules: {e}")
@@ -125,6 +140,24 @@ def parse_args():
         help="Run altitude scan and generate comparison heatmap"
     )
     parser.add_argument(
+        "--detector", type=str, default="all",
+        choices=["insb", "mct_lwir", "digital_lwir", "all"],
+        help="Detector type(s) to compare (default: all)"
+    )
+    parser.add_argument(
+        "--monte-carlo", type=int, default=0,
+        metavar="N",
+        help="Number of Monte Carlo samples (0=deterministic, default: 0)"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None,
+        help="Random seed for Monte Carlo reproducibility"
+    )
+    parser.add_argument(
+        "--confidence", type=float, default=0.90,
+        help="Confidence interval for Monte Carlo (default: 0.90)"
+    )
+    parser.add_argument(
         "--no-plot", action="store_true",
         help="Disable plotting"
     )
@@ -133,6 +166,58 @@ def parse_args():
         help="Output plot filename"
     )
     return parser.parse_args()
+
+
+def get_detectors(args):
+    """Get list of detectors based on arguments."""
+    detectors = []
+
+    if args.detector == "all":
+        detectors.append(InSbDetector(
+            name="InSb MWIR (Analog)",
+            pixel_pitch=15.0,
+            f_number=2.0,
+            integration_time=10.0,
+        ))
+        detectors.append(MCTDetector(
+            name="MCT LWIR (Analog)",
+            spectral_band=(8.0, 12.0),
+            pixel_pitch=20.0,
+            f_number=2.0,
+            integration_time=10.0,
+        ))
+        detectors.append(DigitalLWIRDetector(
+            name="Digital LWIR (DROIC)",
+            spectral_band=(8.0, 12.0),
+            pixel_pitch=15.0,
+            f_number=2.0,
+            integration_time=10.0,
+        ))
+    elif args.detector == "insb":
+        detectors.append(InSbDetector(
+            name="InSb MWIR (Analog)",
+            pixel_pitch=15.0,
+            f_number=2.0,
+            integration_time=10.0,
+        ))
+    elif args.detector == "mct_lwir":
+        detectors.append(MCTDetector(
+            name="MCT LWIR (Analog)",
+            spectral_band=(8.0, 12.0),
+            pixel_pitch=20.0,
+            f_number=2.0,
+            integration_time=10.0,
+        ))
+    elif args.detector == "digital_lwir":
+        detectors.append(DigitalLWIRDetector(
+            name="Digital LWIR (DROIC)",
+            spectral_band=(8.0, 12.0),
+            pixel_pitch=15.0,
+            f_number=2.0,
+            integration_time=10.0,
+        ))
+
+    return detectors
 
 
 def get_targets(args):
@@ -211,6 +296,54 @@ def print_johnson_analysis(insb, mct, targets, args):
     print("  Effective range = min(SNR range, Resolution range)")
 
 
+def print_monte_carlo_results(mc_results, targets, args):
+    """Print Monte Carlo simulation results."""
+    print("\n" + "=" * 90)
+    print(f"MONTE CARLO DETECTION RANGE (N={args.monte_carlo}, {args.confidence:.0%} CI)")
+    print("=" * 90)
+
+    # Build header based on number of detectors
+    detector_names = list(mc_results.keys())
+    header = "{:25}".format("Target")
+    for det_name in detector_names:
+        header += " {:>20}".format(det_name[:20])
+    print("\n" + header)
+    print("-" * (25 + 21 * len(detector_names)))
+
+    for name, target in targets:
+        row = "{:25}".format(name[:25])
+        for det_name in detector_names:
+            result = mc_results[det_name]
+            if args.confidence == 0.90:
+                low, high = result.confidence_interval_90
+            else:
+                low, high = result.confidence_interval_50
+            row += " {:>6.1f} [{:>5.1f}-{:>5.1f}]".format(
+                result.mean_range_km, low, high
+            )
+        print(row)
+
+    print("-" * (25 + 21 * len(detector_names)))
+    if args.confidence == 0.90:
+        print("All ranges in km with 90% confidence intervals [p5-p95]")
+    else:
+        print("All ranges in km with 50% confidence intervals [p25-p75]")
+
+    # Print statistics summary
+    print("\n" + "-" * 90)
+    print("MONTE CARLO STATISTICS")
+    print("-" * 90)
+    print("{:25} {:>12} {:>12} {:>12} {:>12}".format(
+        "Detector", "Mean (km)", "Std (km)", "Median (km)", "CoV (%)"))
+    print("-" * 75)
+    for det_name in detector_names:
+        result = mc_results[det_name]
+        cov = 100 * result.std_range_km / result.mean_range_km if result.mean_range_km > 0 else 0
+        print("{:25} {:>12.1f} {:>12.1f} {:>12.1f} {:>12.1f}".format(
+            det_name[:25], result.mean_range_km, result.std_range_km,
+            result.median_range_km, cov))
+
+
 def print_combined_analysis(insb, mct, targets, args):
     """Print combined SNR and Johnson analysis."""
     print("\n" + "=" * 80)
@@ -284,24 +417,18 @@ def main():
         if 'recognition_range' in scenario.analysis_types or 'johnson_probability' in scenario.analysis_types:
             args.johnson = True
 
+        # Assign to detectors list for unified handling
+        all_detectors = detectors
+        # For backward compatibility with Johnson analysis
         insb = detectors[0] if len(detectors) > 0 else InSbDetector()
         mct = detectors[1] if len(detectors) > 1 else MCTDetector()
     else:
-        # Create detectors
-        insb = InSbDetector(
-            name="InSb MWIR",
-            pixel_pitch=15.0,
-            f_number=2.0,
-            integration_time=10.0,
-        )
+        # Create detectors based on --detector argument
+        all_detectors = get_detectors(args)
 
-        mct = MCTDetector(
-            name="MCT LWIR",
-            spectral_band=(8.0, 12.0),
-            pixel_pitch=20.0,
-            f_number=2.0,
-            integration_time=10.0,
-        )
+        # For backward compatibility with existing Johnson analysis
+        insb = next((d for d in all_detectors if 'MWIR' in d.name), InSbDetector())
+        mct = next((d for d in all_detectors if 'LWIR' in d.name and 'Digital' not in d.name), MCTDetector())
 
         targets = get_targets(args)
 
@@ -331,7 +458,7 @@ def main():
     print("DETECTOR SPECIFICATIONS")
     print("-" * 70)
 
-    for det in [insb, mct]:
+    for det in all_detectors:
         print(f"\n{det.name}:")
         print(f"  Spectral band: {det.spectral_band[0]}-{det.spectral_band[1]} um")
         print(f"  D*: {det.d_star:.1e} cm*sqrt(Hz)/W")
@@ -364,28 +491,78 @@ def main():
     print("DETECTION RANGE COMPARISON (SNR-Limited)")
     print("-" * 70)
 
-    print("\n{:25} {:>12} {:>12} {:>12}".format(
-        "Target", "MWIR (km)", "LWIR (km)", "Winner"))
-    print("-" * 65)
-
     primary_target = targets[0][1]  # For later plots
 
+    # Monte Carlo simulation
+    mc_results = {}
+    if args.monte_carlo > 0:
+        print(f"\nRunning Monte Carlo simulation with {args.monte_carlo} samples...")
+        if args.seed is not None:
+            print(f"Random seed: {args.seed}")
+
+        mc_config = default_monte_carlo_config(args.monte_carlo, args.seed)
+
+        # Run MC for each target with correlated sampling across detectors
+        for name, target in targets:
+            target_mc_results = monte_carlo_multi_detector(
+                all_detectors, target, mc_config,
+                snr_threshold=args.snr_threshold,
+                visibility_km=args.visibility,
+                humidity_percent=args.humidity,
+                sensor_altitude_km=args.sensor_altitude,
+                target_altitude_km=args.target_altitude,
+            )
+            mc_results[name] = target_mc_results
+
+        # Print MC results for first target
+        print_monte_carlo_results(mc_results[targets[0][0]], targets, args)
+
+    # Deterministic comparison
+    print("\n" + "-" * 70)
+    print("DETERMINISTIC DETECTION RANGE COMPARISON")
+    print("-" * 70)
+
+    # Build dynamic header based on number of detectors
+    header = "\n{:25}".format("Target")
+    for det in all_detectors:
+        short_name = det.name.split()[0] if len(det.name.split()) > 1 else det.name[:10]
+        header += " {:>12}".format(short_name[:12])
+    header += " {:>12}".format("Winner")
+    print(header)
+    print("-" * (25 + 13 * (len(all_detectors) + 1)))
+
+    det_results = {}  # Store results for later use
     for name, target in targets:
-        result_insb = calculate_detection_range_slant(
-            insb, target,
-            args.sensor_altitude, args.target_altitude,
-            args.snr_threshold, args.visibility, args.humidity,
-        )
+        row = "{:25}".format(name[:25])
+        results = []
+        for det in all_detectors:
+            result = calculate_detection_range_slant(
+                det, target,
+                args.sensor_altitude, args.target_altitude,
+                args.snr_threshold, args.visibility, args.humidity,
+            )
+            results.append((det.name, result.detection_range_km))
+            row += " {:>12.1f}".format(result.detection_range_km)
 
-        result_mct = calculate_detection_range_slant(
-            mct, target,
-            args.sensor_altitude, args.target_altitude,
-            args.snr_threshold, args.visibility, args.humidity,
-        )
+        # Find winner
+        winner_name, winner_range = max(results, key=lambda x: x[1])
+        winner_short = winner_name.split()[0] if len(winner_name.split()) > 1 else winner_name[:8]
+        row += " {:>12}".format(winner_short)
+        print(row)
 
-        winner = "MWIR" if result_insb.detection_range_km > result_mct.detection_range_km else "LWIR"
-        print("{:25} {:>12.1f} {:>12.1f} {:>12}".format(
-            name[:25], result_insb.detection_range_km, result_mct.detection_range_km, winner))
+        det_results[name] = {r[0]: r[1] for r in results}
+
+    # Store first detector results for backward compatibility
+    result_insb = calculate_detection_range_slant(
+        insb, primary_target,
+        args.sensor_altitude, args.target_altitude,
+        args.snr_threshold, args.visibility, args.humidity,
+    )
+    result_mct = calculate_detection_range_slant(
+        mct, primary_target,
+        args.sensor_altitude, args.target_altitude,
+        args.snr_threshold, args.visibility, args.humidity,
+    )
 
     # Johnson criteria analysis
     if args.johnson:

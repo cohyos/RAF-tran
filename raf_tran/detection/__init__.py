@@ -33,12 +33,24 @@ from raf_tran.detection.scenario_loader import (
     DetectorConfig,
     TargetConfig,
     ScenarioParams,
+    MonteCarloScenarioConfig,
     DetectionScenario,
     create_detector,
     create_target,
     load_scenario,
     save_scenario,
     create_default_scenario,
+)
+
+from raf_tran.detection.monte_carlo import (
+    DistributionType,
+    ParameterDistribution,
+    MonteCarloConfig,
+    MonteCarloResult,
+    sample_parameter,
+    monte_carlo_detection_range,
+    monte_carlo_multi_detector,
+    default_monte_carlo_config,
 )
 
 __all__ = [
@@ -71,10 +83,20 @@ __all__ = [
     'DetectorConfig',
     'TargetConfig',
     'ScenarioParams',
+    'MonteCarloScenarioConfig',
     'DetectionScenario',
     'create_detector',
     'create_target',
     'load_scenario',
     'save_scenario',
     'create_default_scenario',
+    # Monte Carlo simulation
+    'DistributionType',
+    'ParameterDistribution',
+    'MonteCarloConfig',
+    'MonteCarloResult',
+    'sample_parameter',
+    'monte_carlo_detection_range',
+    'monte_carlo_multi_detector',
+    'default_monte_carlo_config',
 ]
