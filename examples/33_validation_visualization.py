@@ -118,7 +118,7 @@ def validate_rayleigh():
     sigma_theory = sigma_550 * (0.55 / wavelengths) ** 4
 
     print("\nWavelength Dependence (normalized to 550 nm):")
-    print(f"{'Wavelength (um)':<18} {'Computed':<15} {'Theory (λ^-4)':<15} {'Ratio':<10}")
+    print(f"{'Wavelength (um)':<18} {'Computed':<15} {'Theory (w^-4)':<15} {'Ratio':<10}")
     print("-" * 58)
 
     for i, wl in enumerate(wavelengths):
@@ -126,7 +126,7 @@ def validate_rayleigh():
         print(f"{wl:<18.2f} {sigma[i]/sigma_550:<15.4f} {sigma_theory[i]/sigma_550:<15.4f} {ratio:<10.4f}")
 
     print("\nKey Observations:")
-    print("- Cross section follows λ^-4 law within 10% (King factor correction)")
+    print("- Cross section follows wavelength^-4 law within 10% (King factor correction)")
     print("- Blue light (450 nm) scatters ~5x more than red (650 nm)")
     print("- This explains why the sky appears blue")
     print("- Depolarization factor included for accuracy")
@@ -283,7 +283,7 @@ def create_validation_plots(atm_results, ray_results, mie_results, ts_results, o
                      bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
 
         # =====================================================================
-        # Plot 2: Rayleigh Scattering λ^-4 Dependence
+        # Plot 2: Rayleigh Scattering wavelength^-4 Dependence
         # =====================================================================
         ax2 = fig.add_subplot(gs[0, 1])
 
@@ -299,7 +299,7 @@ def create_validation_plots(atm_results, ray_results, mie_results, ts_results, o
         ax2.semilogy(wl * 1000, sigma_norm, 'bo-', markersize=8, linewidth=2,
                      label='RAF-tran (with King factor)')
         ax2.semilogy(wl * 1000, theory_norm, 'r--', linewidth=2,
-                     label='Theory: λ^-4')
+                     label='Theory: w^-4')
 
         ax2.set_xlabel('Wavelength (nm)', fontsize=12)
         ax2.set_ylabel('Cross Section (normalized to 550 nm)', fontsize=12)
@@ -326,7 +326,7 @@ def create_validation_plots(atm_results, ray_results, mie_results, ts_results, o
         ax3.loglog(x, Q_mie, 'b-', linewidth=2, label='Mie Theory')
         ax3.loglog(x, Q_ray, 'r--', linewidth=2, label='Rayleigh Approx: (8/3)x⁴|K|²')
 
-        ax3.set_xlabel('Size Parameter x = 2πr/λ', fontsize=12)
+        ax3.set_xlabel('Size Parameter x = 2*pi*r/wavelength', fontsize=12)
         ax3.set_ylabel('Extinction Efficiency Q_ext', fontsize=12)
         ax3.set_title('Mie Scattering: Rayleigh Limit Validation\n'
                       'Mie → Rayleigh as x → 0', fontsize=12, fontweight='bold')
@@ -392,7 +392,7 @@ def main():
     print("=" * 70)
     print("\nThis script validates RAF-tran against:")
     print("  1. US Standard Atmosphere 1976 reference tables")
-    print("  2. Rayleigh scattering λ^-4 wavelength dependence")
+    print("  2. Rayleigh scattering wavelength^-4 dependence")
     print("  3. Mie theory convergence to Rayleigh limit")
     print("  4. Two-stream solver against Beer-Lambert law")
 
@@ -420,7 +420,7 @@ All core physics modules validated against reference values:
    - Correctly models troposphere, tropopause, stratosphere
 
 2. Rayleigh Scattering
-   - λ^-4 wavelength dependence verified
+   - wavelength^-4 dependence verified
    - Cross section matches Bodhaine et al. (1999)
    - Depolarization factor (King factor) included
 

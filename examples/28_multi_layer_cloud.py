@@ -720,7 +720,7 @@ Cloud overlap assumptions significantly impact:
    - Critical for global energy budget
 
 2. PRECIPITATION
-   - Overlap affects when clouds overlap → when rain falls
+   - Overlap affects when clouds overlap -> when rain falls
    - Maximum overlap concentrates precipitation
    - Random overlap spreads it more uniformly
 
