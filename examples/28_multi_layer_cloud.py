@@ -172,10 +172,11 @@ def cloud_optical_depth(lwp, r_eff):
     rho_w = 1e6  # g/m^3 (water density)
     r_eff_m = r_eff * 1e-6  # convert to meters
 
-    # Optical depth approximation
-    tau = 3 * lwp / (2 * rho_w * r_eff_m * 1e6)  # Factor adjustment
+    # Optical depth: tau = 3 * LWP / (2 * rho_w * r_eff)
+    # With LWP in g/m^2, rho_w in g/m^3, r_eff in m
+    tau = 1.5 * lwp / (rho_w * r_eff_m)
 
-    return 1.5 * lwp / (rho_w * r_eff_m * 1e6)
+    return tau
 
 
 def cloud_single_scatter_albedo(wavelength_um, phase='liquid'):
