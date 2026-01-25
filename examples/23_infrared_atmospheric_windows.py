@@ -45,7 +45,7 @@ def parse_args():
         description="Analyze infrared atmospheric windows"
     )
     parser.add_argument("--path-km", type=float, default=1.0, help="Path length (km)")
-    parser.add_argument("--humidity", type=float, default=50, help="Relative humidity (%)")
+    parser.add_argument("--humidity", type=float, default=50, help="Relative humidity (percent)")
     parser.add_argument("--no-plot", action="store_true", help="Disable plotting")
     parser.add_argument("--output", type=str, default="ir_windows.png")
     return parser.parse_args()
