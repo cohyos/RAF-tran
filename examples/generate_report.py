@@ -80,6 +80,7 @@ EXAMPLES = [
     ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
     ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
     ("32_config_file_demo.py", "Configuration File Usage"),
+    ("33_validation_visualization.py", "Physics Validation Visualization"),
 ]
 
 
@@ -168,6 +169,7 @@ def find_plot_for_example(filename, work_dir):
         "30_spectral_surface_albedo.py": "spectral_albedo.png",
         "31_limb_viewing_geometry.py": "limb_viewing.png",
         "32_config_file_demo.py": "config_file_demo.png",
+        "33_validation_visualization.py": "validation_visualization.png",
     }
 
     if filename in plot_mappings:

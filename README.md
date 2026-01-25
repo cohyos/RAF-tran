@@ -247,6 +247,7 @@ python 01_solar_zenith_angle_study.py --help
 | 30 | `spectral_surface_albedo.py` | Snow/ice, vegetation red edge, NDVI |
 | 31 | `limb_viewing_geometry.py` | Satellite limb sounding, onion-peeling retrieval |
 | 32 | `config_file_demo.py` | YAML/JSON configuration file usage |
+| 33 | `validation_visualization.py` | Physics validation plots and comparisons |
 
 ### Example Usage
 

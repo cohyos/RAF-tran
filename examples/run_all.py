@@ -54,6 +54,7 @@ EXAMPLES = [
     ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
     ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
     ("32_config_file_demo.py", "Configuration File Usage"),
+    ("33_validation_visualization.py", "Physics Validation Visualization"),
 ]
 
 
