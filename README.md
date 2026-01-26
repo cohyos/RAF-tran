@@ -19,16 +19,25 @@ The library implements modern computational techniques including:
 - Two-stream and discrete ordinates RTE solvers
 - JAX acceleration for GPU-enabled calculations
 
+## OFFLINE OPERATION
+
+**RAF-tran works fully offline.** All core functionality uses built-in data and models.
+Optional online features (HITRAN database, weather APIs) enhance accuracy but are not required.
+
 ## Features
 
 ### Atmospheric Profiles
 - US Standard Atmosphere 1976
 - MODTRAN model atmospheres (tropical, midlatitude, subarctic)
+- AFGL reference atmospheres with seasonal variations
+- CIRA-86 climatology with latitude dependence
 - Custom profile support with temperature, pressure, and gas mixing ratios
+- **Weather API integration** (optional): ECMWF ERA5, NOAA GFS, NASA MERRA-2
 
 ### Gas Absorption
-- Correlated-k distribution method
-- Support for major absorbing gases (H2O, CO2, O3, etc.)
+- Correlated-k distribution method (~5% accuracy, offline)
+- **Optional HITRAN/HAPI integration** (~1% accuracy, requires `hitran-api`)
+- Support for major absorbing gases (H2O, CO2, O3, CH4, N2O, etc.)
 - Pressure and temperature dependent absorption coefficients
 
 ### Scattering
@@ -42,12 +51,30 @@ The library implements modern computational techniques including:
 - **Discrete ordinates (DISORT)**: Higher accuracy multi-stream solver
 - Solar (shortwave) and thermal (longwave) calculations
 
-### Atmospheric Turbulence (NEW)
-- **Cn2 profiles**: Hufnagel-Valley, SLC day/night models
+### Atmospheric Turbulence (ENHANCED)
+- **Cn2 profiles**: Hufnagel-Valley, SLC day/night, climatological profiles
+- **Real Cn2 data integration**: Load measured profiles, combine ensembles
 - **Beam propagation**: Fried parameter, scintillation index, Rytov variance
 - **Optical effects**: Beam wander, Strehl ratio, coherence time
 - **Turbulence spectra**: Kolmogorov and von Karman power spectra
+- **Phase statistics**: Zernike variance, phase structure function
 - Applications: Free-space optical communications, LIDAR, adaptive optics
+
+### Adaptive Optics Simulation (NEW)
+- **System modeling**: Shack-Hartmann WFS, deformable mirrors
+- **Error budget**: Fitting error, temporal error, noise propagation
+- **Performance prediction**: Strehl ratio, residual phase variance
+- **Zernike analysis**: Mode variance, residual after correction
+- **Multi-conjugate AO**: Basic MCAO fitting error estimation
+- Applications: Ground-based telescopes, laser communications, directed energy
+
+### 3D Spherical Earth Geometry (NEW)
+- **Path calculations**: Slant paths with Earth curvature
+- **Chapman function**: Grazing incidence for high solar zenith angles (>75 deg)
+- **Limb viewing**: Tangent height, ray tracing, limb path integration
+- **Solar geometry**: SZA/azimuth calculation, sunrise/sunset times
+- **Coordinate transforms**: Geodetic, ECEF, local ENU
+- Applications: Satellite remote sensing, limb sounding, aircraft sensors
 
 ### Air Mass Calculations
 - Chapman function for curved-Earth geometry at high solar zenith angles
@@ -72,6 +99,21 @@ The library implements modern computational techniques including:
 - **Atmospheric Variations**: Visibility, humidity, temperature
 - **Statistical Output**: Confidence intervals (p5, p25, p50, p75, p95)
 - **Distribution Types**: Uniform, normal, triangular, lognormal
+
+### Validation Suite (NEW)
+- **Automated benchmarks**: Compare against MODTRAN, literature values
+- **Physics validation**: Rayleigh, Mie, thermal emission, turbulence
+- **Error metrics**: Max, mean, RMS, relative errors
+- **Pass/fail criteria**: Configurable tolerances
+- Run with: `from raf_tran.validation import run_all_validations`
+
+### Streamlit GUI (NEW)
+- **Interactive web interface**: Run simulations without coding
+- **Atmospheric profiles**: Visualize and compare standard atmospheres
+- **IR detection**: Configure detectors and targets, view range analysis
+- **Turbulence analysis**: Cn2 profiles, AO performance
+- **Validation dashboard**: Run and view benchmark results
+- Run with: `streamlit run streamlit_app/app.py`
 
 ## Installation
 
@@ -245,7 +287,7 @@ else:
 
 ## Examples
 
-The `examples/` directory contains 34 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
+The `examples/` directory contains 40 comprehensive, CLI-enabled examples demonstrating RAF-tran capabilities. Each example includes:
 - Command-line arguments for customization
 - Detailed console output with explanations
 - Generated plots (requires matplotlib)
@@ -310,6 +352,17 @@ python 01_solar_zenith_angle_study.py --help
 | # | Example | Description |
 |---|---------|-------------|
 | 34 | `fpa_detection_comparison.py` | MWIR vs LWIR FPA detection range comparison |
+| 35 | `fpa_altitude_detection_study.py` | FPA altitude-dependent detection study |
+
+### New Feature Demonstrations (NEW)
+
+| # | Example | Description |
+|---|---------|-------------|
+| 36 | `hitran_gas_absorption.py` | HITRAN/HAPI optional integration (offline-capable) |
+| 37 | `adaptive_optics_simulation.py` | AO system design and performance prediction |
+| 38 | `real_cn2_profiles.py` | Real Cn2 data integration and manipulation |
+| 39 | `spherical_geometry.py` | 3D Earth geometry, limb viewing, Chapman function |
+| 40 | `weather_profiles.py` | Weather profiles, AFGL atmospheres, online data |
 
 **Example 34 Features:**
 - 3-way comparison: InSb MWIR, MCT LWIR (analog), Digital LWIR (DROIC)
@@ -395,6 +448,83 @@ Sample configuration files are provided in `examples/configs/`:
 - `cloudy_atmosphere.yaml` - Stratocumulus cloud scenario
 - `volcanic_scenario.json` - Post-volcanic eruption atmosphere (JSON format)
 
+## Docker Deployment
+
+RAF-tran can be deployed using Docker for reproducible environments:
+
+```bash
+# Build the image
+docker build -t raf-tran .
+
+# Run the Streamlit GUI (accessible at http://localhost:8501)
+docker run -p 8501:8501 raf-tran streamlit run streamlit_app/app.py --server.address 0.0.0.0
+
+# Run an example
+docker run raf-tran python examples/01_solar_zenith_angle_study.py --no-plot
+
+# Interactive shell
+docker run -it raf-tran bash
+```
+
+Using Docker Compose:
+
+```bash
+# Start the GUI
+docker-compose up gui
+
+# Run examples with output volume
+docker-compose run cli python examples/34_fpa_detection_comparison.py --no-plot
+
+# Generate PDF report
+docker-compose run report
+
+# Run validation suite
+docker-compose run validation
+```
+
+## Graphical User Interface
+
+RAF-tran includes an optional Streamlit-based GUI for interactive simulations:
+
+```bash
+# Install Streamlit (if not already installed)
+pip install streamlit
+
+# Run the GUI
+streamlit run streamlit_app/app.py
+```
+
+The GUI provides:
+- Atmospheric profile visualization and comparison
+- Radiative transfer calculations with real-time plots
+- IR detection simulation with detector/target configuration
+- Turbulence analysis and AO performance prediction
+- Validation suite dashboard
+
+## Validation Suite
+
+Run automated validation tests against MODTRAN and literature benchmarks:
+
+```python
+from raf_tran.validation import run_all_validations, ValidationSuite
+
+# Run all validations
+results = run_all_validations()
+
+# Print summary
+results.print_summary()
+
+# Save results
+results.save("validation_results.json")
+```
+
+Validation tests include:
+- Rayleigh optical depth vs Bodhaine et al. (1999)
+- Transmission spectrum vs MODTRAN
+- Thermal emission vs Stefan-Boltzmann
+- Mie scattering vs Bohren & Huffman (1983)
+- Turbulence parameters vs Andrews & Phillips (2005)
+
 ## Testing
 
 ```bash
@@ -406,6 +536,9 @@ pytest --cov=raf_tran
 
 # Run specific test file
 pytest tests/test_atmosphere.py
+
+# Run validation suite
+python -c "from raf_tran.validation import run_all_validations; run_all_validations()"
 ```
 
 ## Architecture
@@ -415,7 +548,8 @@ raf_tran/
 ├── atmosphere/       # Atmospheric profile models
 │   └── profiles.py   # Standard atmosphere implementations
 ├── gas_optics/       # Gas absorption calculations
-│   └── ckd.py        # Correlated-k distribution
+│   ├── ckd.py        # Correlated-k distribution (offline)
+│   └── hitran.py     # HITRAN/HAPI integration (optional)
 ├── scattering/       # Scattering calculations
 │   ├── rayleigh.py   # Rayleigh scattering
 │   └── mie.py        # Mie scattering
@@ -423,23 +557,37 @@ raf_tran/
 │   ├── two_stream.py # Two-stream approximation
 │   └── disort.py     # Discrete ordinates
 ├── turbulence/       # Atmospheric optical turbulence
-│   ├── cn2_profiles.py  # Hufnagel-Valley, SLC models
-│   ├── propagation.py   # Fried parameter, scintillation
-│   └── kolmogorov.py    # Turbulence spectra
-├── detectors/        # IR detector models (NEW)
+│   ├── cn2_profiles.py    # Hufnagel-Valley, SLC models
+│   ├── propagation.py     # Fried parameter, scintillation
+│   ├── kolmogorov.py      # Turbulence spectra, Zernike
+│   ├── adaptive_optics.py # AO system simulation (NEW)
+│   └── real_cn2_data.py   # Real Cn2 data integration (NEW)
+├── geometry/         # 3D spherical geometry (NEW)
+│   ├── spherical.py  # Chapman function, solar geometry
+│   └── paths.py      # Slant paths, limb viewing, ray tracing
+├── weather/          # Weather data integration (NEW)
+│   ├── profiles.py   # US Std, AFGL, CIRA-86 (offline)
+│   └── online.py     # ECMWF, GFS, MERRA-2 (optional)
+├── validation/       # Validation suite (NEW)
+│   ├── benchmarks.py # MODTRAN comparison framework
+│   └── tests.py      # Individual validation tests
+├── detectors/        # IR detector models
 │   └── fpa.py        # FPA detectors (InSb, MCT, Digital LWIR)
-├── targets/          # Target signature models (NEW)
+├── targets/          # Target signature models
 │   └── aircraft.py   # Aircraft IR signatures
-├── detection/        # Detection calculations (NEW)
+├── detection/        # Detection calculations
 │   ├── range_equation.py   # IR range equation
 │   ├── johnson_criteria.py # Recognition probability
-│   ├── monte_carlo.py      # Monte Carlo simulation (NEW)
+│   ├── monte_carlo.py      # Monte Carlo simulation
 │   └── scenario_loader.py  # YAML configuration
 └── utils/            # Utilities and constants
     ├── constants.py  # Physical constants
     ├── spectral.py   # Spectral functions
     ├── air_mass.py   # Chapman function, air mass
-    └── config.py     # YAML/JSON configuration support (NEW)
+    └── config.py     # YAML/JSON configuration support
+
+streamlit_app/        # Interactive GUI (NEW)
+└── app.py            # Streamlit web application
 ```
 
 ## Scientific Background

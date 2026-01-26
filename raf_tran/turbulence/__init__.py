@@ -9,6 +9,12 @@ which is critical for electro-optics applications such as:
 - Free-space optical communications
 - Astronomical seeing
 - Remote sensing through turbulent atmosphere
+- Adaptive optics system design
+
+OFFLINE OPERATION
+-----------------
+All turbulence models work fully offline. External data sources (NOAA, etc.)
+are optional enhancements for site-specific accuracy.
 
 Key Parameters
 --------------
@@ -27,6 +33,8 @@ Models
 - SLC (Submarine Laser Communication) day/night models
 - Kolmogorov spectrum for turbulence statistics
 - Rytov theory for weak scintillation
+- Adaptive optics performance modeling
+- Real Cn2 data integration (optional online sources)
 
 References
 ----------
@@ -36,6 +44,7 @@ References
   Wave Propagation. Israel Program for Scientific Translations.
 - Hufnagel, R.E. (1974). Variations of atmospheric turbulence. OSA
   Topical Meeting on Optical Propagation through Turbulence.
+- Hardy, J.W. (1998). Adaptive Optics for Astronomical Telescopes. Oxford.
 """
 
 from raf_tran.turbulence.cn2_profiles import (
@@ -71,6 +80,39 @@ from raf_tran.turbulence.kolmogorov import (
     long_exposure_strehl,
 )
 
+# Adaptive optics simulation
+from raf_tran.turbulence.adaptive_optics import (
+    AOSystemConfig,
+    AOPerformance,
+    fitting_error,
+    temporal_error,
+    wfs_noise_propagation,
+    angular_anisoplanatism,
+    focus_anisoplanatism,
+    compute_ao_performance,
+    optimal_actuator_count,
+    zernike_temporal_psd,
+    ShackHartmannWFS,
+    strehl_from_variance,
+    variance_from_strehl,
+    multi_conjugate_fitting_error,
+)
+
+# Real Cn2 data integration
+from raf_tran.turbulence.real_cn2_data import (
+    Cn2Profile,
+    get_climatological_profile,
+    hufnagel_valley_57_profile,
+    bufton_wind_profile,
+    load_profile_from_file,
+    save_profile_to_file,
+    interpolate_profile,
+    combine_profiles,
+    add_turbulent_layer,
+    estimate_cn2_from_weather,
+    get_profile,
+)
+
 __all__ = [
     # Cn2 profiles
     "hufnagel_valley_cn2",
@@ -101,4 +143,31 @@ __all__ = [
     "phase_power_spectrum",
     "residual_phase_variance_ao",
     "long_exposure_strehl",
+    # Adaptive optics
+    "AOSystemConfig",
+    "AOPerformance",
+    "fitting_error",
+    "temporal_error",
+    "wfs_noise_propagation",
+    "angular_anisoplanatism",
+    "focus_anisoplanatism",
+    "compute_ao_performance",
+    "optimal_actuator_count",
+    "zernike_temporal_psd",
+    "ShackHartmannWFS",
+    "strehl_from_variance",
+    "variance_from_strehl",
+    "multi_conjugate_fitting_error",
+    # Real Cn2 data
+    "Cn2Profile",
+    "get_climatological_profile",
+    "hufnagel_valley_57_profile",
+    "bufton_wind_profile",
+    "load_profile_from_file",
+    "save_profile_to_file",
+    "interpolate_profile",
+    "combine_profiles",
+    "add_turbulent_layer",
+    "estimate_cn2_from_weather",
+    "get_profile",
 ]

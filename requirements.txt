@@ -34,6 +34,24 @@ reportlab>=4.0.0
 Pillow>=9.0.0
 
 # =============================================================================
+# GUI (optional - for Streamlit web interface)
+# =============================================================================
+# streamlit>=1.20.0
+# pandas>=1.5.0
+
+# =============================================================================
+# HITRAN/HAPI (optional - for line-by-line gas absorption)
+# =============================================================================
+# hitran-api>=1.2.0
+
+# =============================================================================
+# Online weather data (optional - for ECMWF/GFS access)
+# =============================================================================
+# requests>=2.28.0
+# cdsapi>=0.5.0        # For ECMWF ERA5
+# netCDF4>=1.6.0       # For MERRA-2
+
+# =============================================================================
 # Notes
 # =============================================================================
 # - Python 3.9+ required
@@ -41,3 +59,12 @@ Pillow>=9.0.0
 # - YAML config files require pyyaml
 # - PDF report generation requires reportlab and Pillow
 # - For GPU acceleration with JAX, install jax[cuda] or jax[metal]
+#
+# OFFLINE OPERATION:
+# - All core functionality works offline without optional dependencies
+# - Uncomment optional packages above for enhanced features
+#
+# Optional install commands:
+#   pip install streamlit pandas           # For GUI
+#   pip install hitran-api                 # For HITRAN line-by-line
+#   pip install requests cdsapi netCDF4    # For online weather data

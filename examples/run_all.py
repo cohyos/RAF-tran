@@ -58,6 +58,12 @@ EXAMPLES = [
     # Detection Applications
     ("34_fpa_detection_comparison.py", "FPA Detection Range Comparison"),
     ("35_fpa_altitude_detection_study.py", "FPA Altitude Detection Study"),
+    # New Feature Demonstrations
+    ("36_hitran_gas_absorption.py", "HITRAN Gas Absorption (Optional)"),
+    ("37_adaptive_optics_simulation.py", "Adaptive Optics Simulation"),
+    ("38_real_cn2_profiles.py", "Real Cn2 Profile Integration"),
+    ("39_spherical_geometry.py", "3D Spherical Earth Geometry"),
+    ("40_weather_profiles.py", "Atmospheric Weather Profiles"),
 ]
 
 
