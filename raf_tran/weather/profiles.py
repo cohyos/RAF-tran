@@ -216,6 +216,9 @@ def us_standard_atmosphere(
             temperature[i] = T_base + layers[-1][2] * (h - h_base)
             pressure[i] = P_base * np.exp(-g * (h - h_base) / (R * T_base))
 
+    # Ensure minimum temperature to avoid division issues
+    temperature = np.maximum(temperature, 150.0)
+
     # Calculate density from ideal gas law
     density = pressure / (R * temperature)
 
@@ -383,6 +386,9 @@ def _create_standard_profile(
             temperature[i] = T_tropopause + 54 - 0.0028 * (h - 51000)
         else:
             temperature[i] = max(T_tropopause + 54 - 56 - 0.002 * (h - 71000), 180)
+
+    # Ensure minimum temperature to avoid division issues
+    temperature = np.maximum(temperature, 150.0)
 
     pressure = np.zeros_like(altitudes)
     pressure[0] = P_0

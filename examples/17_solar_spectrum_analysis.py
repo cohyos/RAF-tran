@@ -170,10 +170,7 @@ def main():
         E = approximate_solar_spectrum(wl)
 
         # Rayleigh optical depth
-        try:
-            tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
-        except Exception:
-            tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
+        tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
 
         # Ozone optical depth
         tau_o3 = ozone_optical_depth(wl)
@@ -211,10 +208,7 @@ def main():
         # Calculate transmission for each wavelength
         T_band = np.zeros_like(wl_band)
         for i, wl in enumerate(wl_band):
-            try:
-                tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
-            except Exception:
-                tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
+            tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
             tau_o3 = ozone_optical_depth(wl)
             T_band[i] = np.exp(-(tau_ray + tau_o3) * air_mass)
 
@@ -250,10 +244,7 @@ def main():
     T_without_o3 = []
 
     for wl in uv_wavelengths:
-        try:
-            tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
-        except Exception:
-            tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
+        tau_ray = rayleigh_optical_depth(wl / 1000, 2.152e25)
         tau_o3 = ozone_optical_depth(wl)
 
         T_with_o3.append(np.exp(-(tau_ray + tau_o3) * air_mass))
@@ -320,10 +311,7 @@ Atmospheric effects at SZA = {args.sza} deg:
             T_o3 = []
 
             for wl in wavelengths:
-                try:
-                    tau_r = rayleigh_optical_depth(wl / 1000, 2.152e25)
-                except Exception:
-                    tau_r = rayleigh_optical_depth(wl / 1000, 2.152e25)
+                tau_r = rayleigh_optical_depth(wl / 1000, 2.152e25)
                 tau_oz = ozone_optical_depth(wl)
 
                 T_ray.append(np.exp(-tau_r * air_mass))
