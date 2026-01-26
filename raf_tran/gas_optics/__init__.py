@@ -32,7 +32,7 @@ The hitran submodule provides optional line-by-line calculations:
     ...     # Use CKD for ~5% accuracy (fully offline)
 """
 
-from raf_tran.gas_optics.ckd import CKDTable, GasOptics, compute_optical_depth
+from raf_tran.gas_optics.ckd import CKDTable, GasOptics, compute_optical_depth, create_simple_ckd_table
 
 # Import HITRAN module (always available, but HAPI is optional)
 from raf_tran.gas_optics import hitran
@@ -47,6 +47,7 @@ __all__ = [
     "CKDTable",
     "GasOptics",
     "compute_optical_depth",
+    "create_simple_ckd_table",
     # HITRAN integration (optional)
     "hitran",
     "HAPI_AVAILABLE",

@@ -33,6 +33,7 @@ from raf_tran.turbulence import (
     fried_parameter,
     greenwood_frequency,
     isoplanatic_angle,
+    zernike_variance,
 )
 from raf_tran.turbulence.adaptive_optics import (
     AOSystemConfig,
@@ -43,7 +44,6 @@ from raf_tran.turbulence.adaptive_optics import (
     optimal_actuator_count,
     ShackHartmannWFS,
     strehl_from_variance,
-    zernike_variance,
 )
 
 
