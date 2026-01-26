@@ -10,6 +10,7 @@ All calculations work fully offline.
 """
 
 import numpy as np
+from math import erf
 from typing import Tuple, Optional
 from datetime import datetime, timezone
 
@@ -288,7 +289,7 @@ def chapman_function(
         # Chapman function approximation (Swider, 1964)
         if y < 8:
             # erfc approximation
-            ch = np.sqrt(np.pi * X / 2) * np.exp(y**2) * (1 - np.erf(y))
+            ch = np.sqrt(np.pi * X / 2) * np.exp(y**2) * (1 - erf(y))
         else:
             # Asymptotic expansion
             ch = 1.0 / (y * np.sqrt(np.pi))
@@ -304,7 +305,7 @@ def chapman_function(
 
         if y < 8:
             ch = 2 * ch_90 * np.exp(X * (1 - sin_theta)) - \
-                 np.sqrt(np.pi * X / 2) * np.exp(y**2) * (1 - np.erf(y))
+                 np.sqrt(np.pi * X / 2) * np.exp(y**2) * (1 - erf(y))
         else:
             ch = 2 * ch_90 * np.exp(X * (1 - sin_theta))
 
