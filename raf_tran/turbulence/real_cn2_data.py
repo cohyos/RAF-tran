@@ -357,7 +357,7 @@ def load_profile_from_file(
             cn2=np.array(data['cn2']),
             source=data.get('source', str(filepath)),
             timestamp=data.get('timestamp'),
-            location=tuple(data['location']) if 'location' in data else None,
+            location=tuple(data['location']) if data.get('location') is not None else None,
         )
 
     elif format == 'csv':
