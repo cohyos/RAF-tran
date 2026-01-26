@@ -324,8 +324,8 @@ def main(args):
         winter_szas = []
 
         for h in hours:
-            t_summer = datetime(2024, 6, 21, int(h), int((h % 1) * 60), tzinfo=timezone.utc)
-            t_winter = datetime(2024, 12, 21, int(h), int((h % 1) * 60), tzinfo=timezone.utc)
+            t_summer = datetime(2024, 6, 21, int(h) % 24, int((h % 1) * 60), tzinfo=timezone.utc)
+            t_winter = datetime(2024, 12, 21, int(h) % 24, int((h % 1) * 60), tzinfo=timezone.utc)
             summer_szas.append(solar_zenith_angle(40, -105.25, t_summer))
             winter_szas.append(solar_zenith_angle(40, -105.25, t_winter))
 
