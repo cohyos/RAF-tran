@@ -6,24 +6,24 @@ FPA Altitude Detection Range Study
 This example provides a comprehensive comparison of sensor performance for
 target detection range between three types of Focal Plane Array (FPA) sensors:
 
-1. **MWIR (3-5 µm)** - InSb detector
-   - Pixel pitch: 5 µm
-   - Resolution: 2000 × 2000 pixels
-   - FOV: 7° × 7°
+1. **MWIR (3-5 um)** - InSb detector
+   - Pixel pitch: 5 um
+   - Resolution: 2000 x 2000 pixels
+   - FOV: 7 deg x 7 deg
    - IFOV: 0.061 mrad (finer resolution)
 
-2. **Analog LWIR (8-12 µm)** - MCT detector
-   - Pixel pitch: 10 µm
-   - Resolution: 1000 × 1000 pixels
-   - FOV: 7° × 7°
+2. **Analog LWIR (8-12 um)** - MCT detector
+   - Pixel pitch: 10 um
+   - Resolution: 1000 x 1000 pixels
+   - FOV: 7 deg x 7 deg
    - IFOV: 0.122 mrad
 
-3. **Digital LWIR (8-12 µm)** - DROIC detector
-   - Pixel pitch: 10 µm
-   - Resolution: 1000 × 1000 pixels
-   - FOV: 7° × 7°
+3. **Digital LWIR (8-12 um)** - DROIC detector
+   - Pixel pitch: 10 um
+   - Resolution: 1000 x 1000 pixels
+   - FOV: 7 deg x 7 deg
    - IFOV: 0.122 mrad
-   - Enhanced: 4× well capacity, 67% lower read noise
+   - Enhanced: 4x well capacity, 67% lower read noise
 
 Study Parameters:
 - Target heights: Sea level (0 m), 5,000 m, 10,000 m
@@ -32,7 +32,7 @@ Study Parameters:
 - Target: Generic fighter aircraft (rear aspect)
 
 Physical Principles:
-- MWIR excels at detecting hot exhaust plumes (Wien's peak ~4 µm at 700K)
+- MWIR excels at detecting hot exhaust plumes (Wien's peak ~4 um at 700K)
 - LWIR better for ambient temperature skin detection
 - Higher altitude = thinner atmosphere = better transmission
 - Slant path geometry affects total atmospheric path length
@@ -119,17 +119,17 @@ def create_study_detectors():
     Create the three detector configurations for this study.
 
     Specifications:
-    - MWIR: 5 µm pitch, 2000×2000, 7°×7° FOV → IFOV = 0.061 mrad
-    - LWIR: 10 µm pitch, 1000×1000, 7°×7° FOV → IFOV = 0.122 mrad
+    - MWIR: 5 um pitch, 2000x2000, 7 degx7 deg FOV → IFOV = 0.061 mrad
+    - LWIR: 10 um pitch, 1000x1000, 7 degx7 deg FOV → IFOV = 0.122 mrad
 
-    FOV = 7° = 122.17 mrad
+    FOV = 7 deg = 122.17 mrad
     MWIR IFOV = 122.17 / 2000 = 0.061 mrad
     LWIR IFOV = 122.17 / 1000 = 0.122 mrad
 
     Focal length calculation:
     IFOV = pixel_pitch / focal_length
-    For MWIR: f = 5 µm / 0.061 mrad = 82 mm
-    For LWIR: f = 10 µm / 0.122 mrad = 82 mm
+    For MWIR: f = 5 um / 0.061 mrad = 82 mm
+    For LWIR: f = 10 um / 0.122 mrad = 82 mm
 
     Aperture for f/2.0: D = 82/2 = 41 mm
     """
@@ -137,11 +137,11 @@ def create_study_detectors():
     fov_deg = 7.0
     fov_rad = np.radians(fov_deg)
 
-    # MWIR: 2000 pixels × 5 µm = 10 mm array
+    # MWIR: 2000 pixels x 5 um = 10 mm array
     mwir_array_mm = 2000 * 0.005  # 10 mm
     mwir_focal_mm = mwir_array_mm / (2 * np.tan(fov_rad / 2))  # ~82 mm
 
-    # LWIR: 1000 pixels × 10 µm = 10 mm array
+    # LWIR: 1000 pixels x 10 um = 10 mm array
     lwir_array_mm = 1000 * 0.010  # 10 mm
     lwir_focal_mm = lwir_array_mm / (2 * np.tan(fov_rad / 2))  # ~82 mm
 
@@ -151,28 +151,28 @@ def create_study_detectors():
     print(f"Calculated focal length: {mwir_focal_mm:.1f} mm")
     print(f"Calculated f-number: f/{f_number:.1f}")
 
-    # Create MWIR detector (InSb, 5 µm pitch)
+    # Create MWIR detector (InSb, 5 um pitch)
     mwir = InSbDetector(
         name="MWIR (InSb)",
-        pixel_pitch=5.0,  # 5 µm
+        pixel_pitch=5.0,  # 5 um
         f_number=f_number,
         integration_time=10.0,
     )
 
-    # Create Analog LWIR detector (MCT, 10 µm pitch)
+    # Create Analog LWIR detector (MCT, 10 um pitch)
     lwir_analog = MCTDetector(
         name="LWIR Analog (MCT)",
         spectral_band=(8.0, 12.0),
-        pixel_pitch=10.0,  # 10 µm
+        pixel_pitch=10.0,  # 10 um
         f_number=f_number,
         integration_time=10.0,
     )
 
-    # Create Digital LWIR detector (DROIC, 10 µm pitch)
+    # Create Digital LWIR detector (DROIC, 10 um pitch)
     lwir_digital = DigitalLWIRDetector(
         name="LWIR Digital (DROIC)",
         spectral_band=(8.0, 12.0),
-        pixel_pitch=10.0,  # 10 µm
+        pixel_pitch=10.0,  # 10 um
         f_number=f_number,
         integration_time=10.0,
     )
@@ -247,15 +247,15 @@ PHYSICAL EXPLANATION OF RESULTS
 
 1. SPECTRAL BAND EFFECTS
 ------------------------
-   MWIR (3-5 µm):
-   - Wien's displacement law: Peak emission at T ≈ 700K occurs at ~4 µm
+   MWIR (3-5 um):
+   - Wien's displacement law: Peak emission at T ~ 700K occurs at ~4 um
    - Hot exhaust plumes (600-800K) emit strongly in MWIR
-   - Atmospheric transmission: Good window, but affected by H2O at 2.7 µm
+   - Atmospheric transmission: Good window, but affected by H2O at 2.7 um
 
-   LWIR (8-12 µm):
-   - Peak emission for ambient temperatures (250-300K) at 10-12 µm
+   LWIR (8-12 um):
+   - Peak emission for ambient temperatures (250-300K) at 10-12 um
    - Aircraft skin at cruise (~250K) emits primarily in LWIR
-   - Atmospheric transmission: Excellent window, CO2 absorption at 15 µm outside band
+   - Atmospheric transmission: Excellent window, CO2 absorption at 15 um outside band
 
 2. ALTITUDE EFFECTS ON DETECTION RANGE
 --------------------------------------
@@ -296,14 +296,14 @@ PHYSICAL EXPLANATION OF RESULTS
    - Detects cooler skin temperatures
    - Wider atmospheric window
    - Less affected by solar glint/reflections
-   - Digital LWIR: 4× well capacity reduces noise, ~40% range improvement
+   - Digital LWIR: 4x well capacity reduces noise, ~40% range improvement
 
 5. DIGITAL LWIR ENHANCEMENT
 ---------------------------
    DROIC (Digital Read-Out IC) provides:
-   - Well capacity: 4.0×10⁶ electrons (vs 1.0×10⁶ analog)
+   - Well capacity: 4.0x10e6 electrons (vs 1.0x10e6 analog)
    - Read noise: 50 electrons RMS (vs 150 electrons analog)
-   - SNR improvement: ~1.4× over analog LWIR
+   - SNR improvement: ~1.4x over analog LWIR
    - Detection range improvement: ~20-40% depending on conditions
 
 ================================================================================
@@ -531,17 +531,17 @@ def main():
         "Parameter", "MWIR", "LWIR Analog", "LWIR Digital"))
     print("-" * 65)
     print("{:25} {:>12} {:>12} {:>12}".format(
-        "Spectral band (µm)", "3-5", "8-12", "8-12"))
+        "Spectral band (um)", "3-5", "8-12", "8-12"))
     print("{:25} {:>12} {:>12} {:>12}".format(
-        "Pixel pitch (µm)", "5", "10", "10"))
+        "Pixel pitch (um)", "5", "10", "10"))
     print("{:25} {:>12} {:>12} {:>12}".format(
-        "Resolution (pixels)", "2000×2000", "1000×1000", "1000×1000"))
+        "Resolution (pixels)", "2000x2000", "1000x1000", "1000x1000"))
     print("{:25} {:>12} {:>12} {:>12}".format(
-        "FOV (degrees)", "7×7", "7×7", "7×7"))
+        "FOV (degrees)", "7x7", "7x7", "7x7"))
     print("{:25} {:>12.3f} {:>12.3f} {:>12.3f}".format(
         "IFOV (mrad)", mwir.ifov, lwir_analog.ifov, lwir_digital.ifov))
     print("{:25} {:>12.1e} {:>12.1e} {:>12.1e}".format(
-        "D* (cm√Hz/W)", mwir.d_star, lwir_analog.d_star, lwir_digital.d_star))
+        "D* (cmsqrtHz/W)", mwir.d_star, lwir_analog.d_star, lwir_digital.d_star))
     print("{:25} {:>12.0f} {:>12.0f} {:>12.0f}".format(
         "NETD (mK)", mwir.netd, lwir_analog.netd, lwir_digital.netd))
     print("{:25} {:>12.2e} {:>12.2e} {:>12.2e}".format(
@@ -681,7 +681,7 @@ def main():
                 ratio = 0
             ratios.append(ratio)
 
-        print("{:>12,} {:>15.2f}× {:>15.2f}× {:>15.2f}×".format(
+        print("{:>12,} {:>15.2f}x {:>15.2f}x {:>15.2f}x".format(
             int(sensor_h), ratios[0], ratios[1], ratios[2]))
 
     # Print physical explanation

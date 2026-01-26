@@ -54,7 +54,7 @@ def planck_function(wavelength: np.ndarray, temperature: float) -> np.ndarray:
     Calculate Planck blackbody spectral radiance.
 
     Computes the spectral radiance B(λ, T) using Planck's law:
-    B(λ, T) = (2hc²/λ⁵) / (exp(hc/λkT) - 1)
+    B(λ, T) = (2hc^2/λ⁵) / (exp(hc/λkT) - 1)
 
     Parameters
     ----------
@@ -66,7 +66,7 @@ def planck_function(wavelength: np.ndarray, temperature: float) -> np.ndarray:
     Returns
     -------
     radiance : ndarray
-        Spectral radiance in W/m²/sr/m
+        Spectral radiance in W/m^2/sr/m
     """
     wavelength = np.asarray(wavelength)
 
@@ -85,7 +85,7 @@ def planck_function(wavelength: np.ndarray, temperature: float) -> np.ndarray:
         exp_term = np.exp(exponent)
 
     # For very large exponents, use asymptotic form
-    mask = exponent > 700  # exp(700) ≈ 1e304
+    mask = exponent > 700  # exp(700) ~ 1e304
     result = np.where(mask, 0.0, term1 / (exp_term - 1))
 
     return result
@@ -106,7 +106,7 @@ def planck_function_jax(wavelength: jnp.ndarray, temperature: float) -> jnp.ndar
     Returns
     -------
     radiance : jnp.ndarray
-        Spectral radiance in W/m²/sr/m
+        Spectral radiance in W/m^2/sr/m
     """
     term1 = FIRST_RADIATION_CONSTANT / (wavelength**5)
     exponent = SECOND_RADIATION_CONSTANT / (wavelength * temperature)
@@ -133,7 +133,7 @@ def planck_function_wavenumber(wavenumber: np.ndarray, temperature: float) -> np
     Returns
     -------
     radiance : ndarray
-        Spectral radiance in W/m²/sr/cm⁻¹
+        Spectral radiance in W/m^2/sr/cm⁻¹
     """
     wavenumber = np.asarray(wavenumber)
 
@@ -143,7 +143,7 @@ def planck_function_wavenumber(wavenumber: np.ndarray, temperature: float) -> np
     # Convert wavenumber from cm⁻¹ to m⁻¹
     nu_m = wavenumber * 100.0  # cm⁻¹ to m⁻¹
 
-    # c1_nu = 2hc² in appropriate units
+    # c1_nu = 2hc^2 in appropriate units
     c1_nu = 2.0 * PLANCK_CONSTANT * SPEED_OF_LIGHT**2
 
     # c2 = hc/k
@@ -158,7 +158,7 @@ def planck_function_wavenumber(wavenumber: np.ndarray, temperature: float) -> np
     mask = exponent > 700
     result = np.where(mask, 0.0, term1 / (exp_term - 1))
 
-    # Convert from W/m²/sr/m⁻¹ to W/m²/sr/cm⁻¹
+    # Convert from W/m^2/sr/m⁻¹ to W/m^2/sr/cm⁻¹
     return result * 100.0
 
 
@@ -176,7 +176,7 @@ def stefan_boltzmann_flux(temperature: float) -> float:
     Returns
     -------
     flux : float
-        Total hemispherical flux in W/m²
+        Total hemispherical flux in W/m^2
     """
     from raf_tran.utils.constants import STEFAN_BOLTZMANN
     return STEFAN_BOLTZMANN * temperature**4

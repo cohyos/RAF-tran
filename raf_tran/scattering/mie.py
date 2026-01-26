@@ -257,11 +257,11 @@ class MieScattering:
         Returns
         -------
         sigma_ext : ndarray
-            Extinction cross section in μm²
+            Extinction cross section in μm^2
         sigma_sca : ndarray
-            Scattering cross section in μm²
+            Scattering cross section in μm^2
         sigma_abs : ndarray
-            Absorption cross section in μm²
+            Absorption cross section in μm^2
         """
         wavelength = np.asarray(wavelength)
         size_parameter = 2 * np.pi * radius / wavelength
@@ -329,7 +329,7 @@ def lognormal_size_distribution(
     """
     Calculate lognormal particle size distribution.
 
-    n(r) = N / (√(2π) r ln(σ_g)) * exp(-(ln(r/r_g))² / (2 ln²(σ_g)))
+    n(r) = N / (sqrt(2π) r ln(sigma_g)) * exp(-(ln(r/r_g))^2 / (2 ln^2(sigma_g)))
 
     Parameters
     ----------
