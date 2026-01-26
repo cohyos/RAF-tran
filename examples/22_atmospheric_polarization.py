@@ -18,7 +18,7 @@ The degree of polarization depends on:
 
 References:
 - Coulson, K.L. (1988). Polarization and Intensity of Light in the Atmosphere.
-- Horváth, G. & Varjú, D. (2004). Polarized Light in Animal Vision.
+- Horvath, G. & Varju, D. (2004). Polarized Light in Animal Vision.
 
 Usage:
     python 22_atmospheric_polarization.py

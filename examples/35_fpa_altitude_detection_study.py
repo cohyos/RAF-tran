@@ -119,8 +119,8 @@ def create_study_detectors():
     Create the three detector configurations for this study.
 
     Specifications:
-    - MWIR: 5 um pitch, 2000x2000, 7 degx7 deg FOV → IFOV = 0.061 mrad
-    - LWIR: 10 um pitch, 1000x1000, 7 degx7 deg FOV → IFOV = 0.122 mrad
+    - MWIR: 5 um pitch, 2000x2000, 7 degx7 deg FOV -> IFOV = 0.061 mrad
+    - LWIR: 10 um pitch, 1000x1000, 7 degx7 deg FOV -> IFOV = 0.122 mrad
 
     FOV = 7 deg = 122.17 mrad
     MWIR IFOV = 122.17 / 2000 = 0.061 mrad
@@ -272,7 +272,7 @@ PHYSICAL EXPLANATION OF RESULTS
 3. SLANT PATH GEOMETRY
 ----------------------
    Detection range is LIMITED by:
-   - Geometric slant range = sqrt(horizontal² + vertical²)
+   - Geometric slant range = sqrt(horizontal^2 + vertical^2)
    - Atmospheric transmission along slant path
    - At high elevation angles, path is shorter through atmosphere
    - At low elevation angles, path traverses more atmosphere
@@ -328,7 +328,7 @@ def run_front_aspect_comparison(args, mwir, lwir_analog, lwir_digital):
 
     print(f"\nTarget: Fighter (Front Aspect)")
     print(f"  Skin temperature: {target.skin_temp:.0f} K")
-    print(f"  Skin area: {target.skin_area:.1f} m²")
+    print(f"  Skin area: {target.skin_area:.1f} m^2")
     print(f"  MWIR intensity: {target.radiant_intensity_mwir():.1f} W/sr")
     print(f"  LWIR intensity: {target.radiant_intensity_lwir():.1f} W/sr")
 
@@ -545,7 +545,7 @@ def main():
     print("{:25} {:>12.0f} {:>12.0f} {:>12.0f}".format(
         "NETD (mK)", mwir.netd, lwir_analog.netd, lwir_digital.netd))
     print("{:25} {:>12.2e} {:>12.2e} {:>12.2e}".format(
-        "NEI (W/cm²)", mwir.noise_equivalent_irradiance(),
+        "NEI (W/cm^2)", mwir.noise_equivalent_irradiance(),
         lwir_analog.noise_equivalent_irradiance(),
         lwir_digital.noise_equivalent_irradiance()))
 
@@ -560,9 +560,9 @@ def main():
     for target_name, target in targets.items():
         print(f"\n  {target_name}:")
         print(f"    Exhaust temperature: {target.exhaust_temp:.0f} K")
-        print(f"    Exhaust area: {target.exhaust_area:.2f} m²")
+        print(f"    Exhaust area: {target.exhaust_area:.2f} m^2")
         print(f"    Skin temperature: {target.skin_temp:.0f} K")
-        print(f"    Skin area: {target.skin_area:.1f} m²")
+        print(f"    Skin area: {target.skin_area:.1f} m^2")
         print(f"    MWIR intensity: {target.radiant_intensity_mwir():.1f} W/sr")
         print(f"    LWIR intensity: {target.radiant_intensity_lwir():.1f} W/sr")
 
