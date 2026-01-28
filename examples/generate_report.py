@@ -93,6 +93,8 @@ EXAMPLES = [
     ("41_fpa_library_comparison.py", "FPA Library Sensor Comparison"),
     ("42_sensor_assembly_optimization.py", "Sensor Assembly and Optimization"),
     ("43_air_to_air_detection_optimization.py", "Air-to-Air F-16 Detection MC Optimization"),
+    ("44_air_tractor_detection_mc.py", "Air Tractor AT-802 Detection MC Optimization"),
+    ("45_ballistic_missile_detection_mc.py", "Ballistic Missile Post-Boost Detection MC"),
 ]
 
 
@@ -270,6 +272,8 @@ def find_plot_for_example(filename, work_dir):
         "41_fpa_library_comparison.py": "outputs/41_fpa_library_comparison.png",
         "42_sensor_assembly_optimization.py": "outputs/42_sensor_assembly_optimization.png",
         "43_air_to_air_detection_optimization.py": "outputs/43_air_to_air_detection.png",
+        "44_air_tractor_detection_mc.py": "outputs/44_air_tractor_detection.png",
+        "45_ballistic_missile_detection_mc.py": "outputs/45_ballistic_missile_detection.png",
     }
 
     if filename in plot_mappings:
