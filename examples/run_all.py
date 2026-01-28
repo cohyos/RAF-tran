@@ -66,6 +66,7 @@ EXAMPLES = [
     ("40_weather_profiles.py", "Atmospheric Weather Profiles"),
     ("41_fpa_library_comparison.py", "FPA Library Sensor Comparison"),
     ("42_sensor_assembly_optimization.py", "Sensor Assembly and Optimization"),
+    ("43_air_to_air_detection_optimization.py", "Air-to-Air F-16 Detection MC Optimization"),
 ]
 
 
