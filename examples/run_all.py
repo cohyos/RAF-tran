@@ -64,6 +64,7 @@ EXAMPLES = [
     ("38_real_cn2_profiles.py", "Real Cn2 Profile Integration"),
     ("39_spherical_geometry.py", "3D Spherical Earth Geometry"),
     ("40_weather_profiles.py", "Atmospheric Weather Profiles"),
+    ("41_fpa_library_comparison.py", "FPA Library Sensor Comparison"),
 ]
 
 

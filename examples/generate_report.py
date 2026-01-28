@@ -90,6 +90,7 @@ EXAMPLES = [
     ("38_real_cn2_profiles.py", "Real Cn2 Profile Integration"),
     ("39_spherical_geometry.py", "3D Spherical Earth Geometry"),
     ("40_weather_profiles.py", "Atmospheric Weather Profiles"),
+    ("41_fpa_library_comparison.py", "FPA Library Sensor Comparison"),
 ]
 
 
@@ -264,6 +265,7 @@ def find_plot_for_example(filename, work_dir):
         "38_real_cn2_profiles.py": "outputs/38_real_cn2_profiles.png",
         "39_spherical_geometry.py": "outputs/39_spherical_geometry.png",
         "40_weather_profiles.py": "outputs/40_weather_profiles.png",
+        "41_fpa_library_comparison.py": "outputs/41_fpa_library_comparison.png",
     }
 
     if filename in plot_mappings:

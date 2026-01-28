@@ -100,6 +100,15 @@ Optional online features (HITRAN database, weather APIs) enhance accuracy but ar
 - **Statistical Output**: Confidence intervals (p5, p25, p50, p75, p95)
 - **Distribution Types**: Uniform, normal, triangular, lognormal
 
+### FPA Library (NEW)
+- **Comprehensive database**: FPAs and ROICs from SCD, Teledyne FLIR, L3Harris, Raytheon, DRS, Axiom
+- **Search and filter**: By vendor, spectral band, cooling type, resolution, pitch, NETD
+- **Analysis**: Johnson criteria DRI ranges, SWaP-C scores, sensitivity metrics
+- **Configuration**: Save/load JSON configs, export database, custom FPA definitions
+- **Visualization**: Resolution vs pitch, NETD comparison, DRI ranges, spectral coverage
+- **Modular**: Can be used independently of RAF-tran in other projects
+- Usage: `from raf_tran.fpa_library import search_fpas, compare_fpas`
+
 ### Validation Suite (NEW)
 - **Automated benchmarks**: Compare against MODTRAN, literature values
 - **Physics validation**: Rayleigh, Mie, thermal emission, turbulence
@@ -363,6 +372,7 @@ python 01_solar_zenith_angle_study.py --help
 | 38 | `real_cn2_profiles.py` | Real Cn2 data integration and manipulation |
 | 39 | `spherical_geometry.py` | 3D Earth geometry, limb viewing, Chapman function |
 | 40 | `weather_profiles.py` | Weather profiles, AFGL atmospheres, online data |
+| 41 | `fpa_library_comparison.py` | FPA library: multi-vendor sensor comparison and trade study |
 
 **Example 34 Features:**
 - 3-way comparison: InSb MWIR, MCT LWIR (analog), Digital LWIR (DROIC)
