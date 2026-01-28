@@ -69,6 +69,11 @@ EXAMPLES = [
     ("43_air_to_air_detection_optimization.py", "Air-to-Air F-16 Detection MC Optimization"),
     ("44_air_tractor_detection_mc.py", "Air Tractor AT-802 Detection MC Optimization"),
     ("45_ballistic_missile_detection_mc.py", "Ballistic Missile Post-Boost Detection MC"),
+    # SCD-Only Variants
+    ("46_scd_fpa_library_comparison.py", "SCD FPA Library Comparison"),
+    ("47_scd_air_to_air_detection_mc.py", "SCD Air-to-Air F-16 Detection MC"),
+    ("48_scd_air_tractor_detection_mc.py", "SCD Air Tractor AT-802 Detection MC"),
+    ("49_scd_ballistic_missile_detection_mc.py", "SCD Ballistic Missile Detection MC"),
 ]
 
 

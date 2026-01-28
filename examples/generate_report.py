@@ -95,6 +95,11 @@ EXAMPLES = [
     ("43_air_to_air_detection_optimization.py", "Air-to-Air F-16 Detection MC Optimization"),
     ("44_air_tractor_detection_mc.py", "Air Tractor AT-802 Detection MC Optimization"),
     ("45_ballistic_missile_detection_mc.py", "Ballistic Missile Post-Boost Detection MC"),
+    # SCD-Only Variants
+    ("46_scd_fpa_library_comparison.py", "SCD FPA Library Comparison"),
+    ("47_scd_air_to_air_detection_mc.py", "SCD Air-to-Air F-16 Detection MC"),
+    ("48_scd_air_tractor_detection_mc.py", "SCD Air Tractor AT-802 Detection MC"),
+    ("49_scd_ballistic_missile_detection_mc.py", "SCD Ballistic Missile Detection MC"),
 ]
 
 
@@ -274,6 +279,10 @@ def find_plot_for_example(filename, work_dir):
         "43_air_to_air_detection_optimization.py": "outputs/43_air_to_air_detection.png",
         "44_air_tractor_detection_mc.py": "outputs/44_air_tractor_detection.png",
         "45_ballistic_missile_detection_mc.py": "outputs/45_ballistic_missile_detection.png",
+        "46_scd_fpa_library_comparison.py": "outputs/46_scd_fpa_library_comparison.png",
+        "47_scd_air_to_air_detection_mc.py": "outputs/47_scd_air_to_air_detection.png",
+        "48_scd_air_tractor_detection_mc.py": "outputs/48_scd_air_tractor_detection.png",
+        "49_scd_ballistic_missile_detection_mc.py": "outputs/49_scd_ballistic_missile_detection.png",
     }
 
     if filename in plot_mappings:
