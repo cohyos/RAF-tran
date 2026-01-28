@@ -33,6 +33,8 @@ Key Features
 - SWaP-C analysis and trade studies
 - Configuration save/load (JSON)
 - Visualization functions for comparison charts
+- Sensor assembly: FPA + optics + operating parameters with conflict validation
+- Optimizer: parameter sweeps, multi-FPA search, Pareto frontier
 
 Usage
 -----
@@ -104,6 +106,29 @@ from raf_tran.fpa_library.analysis import (
     spectral_band_comparison,
 )
 
+# Sensor Assembly
+from raf_tran.fpa_library.sensor import (
+    SensorAssembly,
+    OpticsConfig,
+    OperatingParams,
+    ValidationResult,
+    ValidationIssue,
+)
+
+# Optimizer
+from raf_tran.fpa_library.optimizer import (
+    optimize_sensor,
+    find_best_fpa,
+    sweep_focal_length,
+    sweep_parameters,
+    pareto_frontier,
+    sensitivity_analysis,
+    format_results_table,
+    ParameterRange,
+    OptimizationConstraint,
+    OptimizationResult,
+)
+
 __all__ = [
     # Models
     "FPASpec", "ROICSpec", "ArrayFormat", "SpectralRange",
@@ -123,4 +148,12 @@ __all__ = [
     "compute_swap_score", "compute_sensitivity_score",
     "pitch_miniaturization_factor", "hot_reliability_gain",
     "spectral_band_comparison",
+    # Sensor Assembly
+    "SensorAssembly", "OpticsConfig", "OperatingParams",
+    "ValidationResult", "ValidationIssue",
+    # Optimizer
+    "optimize_sensor", "find_best_fpa", "sweep_focal_length",
+    "sweep_parameters", "pareto_frontier", "sensitivity_analysis",
+    "format_results_table", "ParameterRange", "OptimizationConstraint",
+    "OptimizationResult",
 ]

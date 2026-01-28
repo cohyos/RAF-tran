@@ -65,6 +65,7 @@ EXAMPLES = [
     ("39_spherical_geometry.py", "3D Spherical Earth Geometry"),
     ("40_weather_profiles.py", "Atmospheric Weather Profiles"),
     ("41_fpa_library_comparison.py", "FPA Library Sensor Comparison"),
+    ("42_sensor_assembly_optimization.py", "Sensor Assembly and Optimization"),
 ]
 
 

@@ -91,6 +91,7 @@ EXAMPLES = [
     ("39_spherical_geometry.py", "3D Spherical Earth Geometry"),
     ("40_weather_profiles.py", "Atmospheric Weather Profiles"),
     ("41_fpa_library_comparison.py", "FPA Library Sensor Comparison"),
+    ("42_sensor_assembly_optimization.py", "Sensor Assembly and Optimization"),
 ]
 
 
@@ -266,6 +267,7 @@ def find_plot_for_example(filename, work_dir):
         "39_spherical_geometry.py": "outputs/39_spherical_geometry.png",
         "40_weather_profiles.py": "outputs/40_weather_profiles.png",
         "41_fpa_library_comparison.py": "outputs/41_fpa_library_comparison.png",
+        "42_sensor_assembly_optimization.py": "outputs/42_sensor_assembly_optimization.png",
     }
 
     if filename in plot_mappings:
