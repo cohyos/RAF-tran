@@ -58,7 +58,7 @@ Examples:
     )
     parser.add_argument(
         "--solar", type=float, default=1361,
-        help="Solar constant in W/m² (default: 1361)"
+        help="Solar constant in W/m^2 (default: 1361)"
     )
     parser.add_argument(
         "--n-layers", type=int, default=20,
@@ -77,7 +77,7 @@ Examples:
 
 def effective_temperature(solar, albedo):
     """Calculate effective radiating temperature with no atmosphere."""
-    # Energy balance: (1-a)*S/4 = σT⁴
+    # Energy balance: (1-a)*S/4 = sigmaT^4
     return ((1 - albedo) * solar / (4 * STEFAN_BOLTZMANN))**0.25
 
 
@@ -121,17 +121,23 @@ def iterative_equilibrium(tau_per_layer, n_layers, solar, albedo, max_iter=100):
         )
 
         # Surface energy balance: absorbed solar = emitted - backradiation
-        # σT_s⁴ = absorbed_solar + F_down(surface)
-        backradiation = result.flux_down[-1]
+        # sigmaT_s^4 = absorbed_solar + F_down(surface)
+        # After level ordering fix: index 0 = surface, index -1 = TOA
+        backradiation = result.flux_down[0]  # Surface level
         T_surface_new = ((absorbed_solar + backradiation) / STEFAN_BOLTZMANN)**0.25
 
         # Update layer temperatures based on local radiative equilibrium
         for i in range(n_layers):
-            # Layer absorbs and emits
-            F_up_in = result.flux_up[i + 1]
-            F_down_in = result.flux_down[i]
-            F_up_out = result.flux_up[i]
-            F_down_out = result.flux_down[i + 1]
+            # Layer absorbs and emits (layer i is between levels i and i+1)
+            # With surface-to-TOA ordering:
+            #   F_up entering from below = flux_up[i]
+            #   F_up leaving at top = flux_up[i+1]
+            #   F_down entering from above = flux_down[i+1]
+            #   F_down leaving at bottom = flux_down[i]
+            F_up_in = result.flux_up[i]       # From surface side
+            F_up_out = result.flux_up[i + 1]  # To TOA side
+            F_down_in = result.flux_down[i + 1]  # From TOA side
+            F_down_out = result.flux_down[i]     # To surface side
 
             # Net heating of layer
             net_absorbed = (F_up_in - F_up_out) + (F_down_in - F_down_out)
@@ -155,7 +161,7 @@ def main():
     print("=" * 80)
     print("GREENHOUSE EFFECT DEMONSTRATION")
     print("=" * 80)
-    print(f"\nSolar constant: {args.solar} W/m²")
+    print(f"\nSolar constant: {args.solar} W/m^2")
     print(f"Planetary albedo: {args.albedo}")
     print(f"IR optical depth: {args.tau}")
     print(f"Number of layers: {args.n_layers}")
@@ -169,17 +175,17 @@ def main():
     print("=" * 80)
     print(f"""
 Energy Balance:
-  Absorbed solar = (1 - albedo) × S₀/4
-                 = (1 - {args.albedo}) × {args.solar}/4
-                 = {absorbed_solar:.1f} W/m²
+  Absorbed solar = (1 - albedo) * S_0/4
+                 = (1 - {args.albedo}) * {args.solar}/4
+                 = {absorbed_solar:.1f} W/m^2
 
   At equilibrium: Absorbed = Emitted
-  σT⁴ = {absorbed_solar:.1f} W/m²
+  sigmaT^4 = {absorbed_solar:.1f} W/m^2
   T = ({absorbed_solar:.1f} / {STEFAN_BOLTZMANN:.4e})^0.25
-  T = {T_eff:.1f} K ({T_eff - 273.15:.1f}°C)
+  T = {T_eff:.1f} K ({T_eff - 273.15:.1f} degC)
 
 This is Earth's EFFECTIVE TEMPERATURE - what we'd measure from space.
-The actual mean surface temperature is ~288 K (15°C).
+The actual mean surface temperature is ~288 K (15 degC).
 The difference ({288 - T_eff:.0f} K) is the GREENHOUSE EFFECT.
 """)
 
@@ -189,11 +195,11 @@ The difference ({288 - T_eff:.0f} K) is the GREENHOUSE EFFECT.
     print("PART 2: SIMPLE ONE-LAYER MODEL")
     print("=" * 80)
     print(f"""
-With a single absorbing layer at optical depth τ = {args.tau}:
+With a single absorbing layer at optical depth tau = {args.tau}:
 
-  T_surface = T_eff × (1 + τ/2)^0.25
-            = {T_eff:.1f} × (1 + {args.tau}/2)^0.25
-            = {T_simple:.1f} K ({T_simple - 273.15:.1f}°C)
+  T_surface = T_eff * (1 + tau/2)^0.25
+            = {T_eff:.1f} * (1 + {args.tau}/2)^0.25
+            = {T_simple:.1f} K ({T_simple - 273.15:.1f} degC)
 
 Greenhouse warming = {T_simple - T_eff:.1f} K
 """)
@@ -211,16 +217,16 @@ Greenhouse warming = {T_simple - T_eff:.1f} K
     )
 
     print(f"""
-With {args.n_layers} atmospheric layers (τ_total = {args.tau}):
+With {args.n_layers} atmospheric layers (tau_total = {args.tau}):
 
-  Surface temperature: {T_surface:.1f} K ({T_surface - 273.15:.1f}°C)
+  Surface temperature: {T_surface:.1f} K ({T_surface - 273.15:.1f} degC)
   Top layer temperature: {T_layers[-1]:.1f} K
   Greenhouse warming: {T_surface - T_eff:.1f} K
 
 Flux balance:
-  Outgoing LW at TOA: {result.flux_up[0]:.1f} W/m²
-  Absorbed solar: {absorbed_solar:.1f} W/m²
-  Backradiation to surface: {result.flux_down[-1]:.1f} W/m²
+  Outgoing LW at TOA: {result.flux_up[-1]:.1f} W/m^2
+  Absorbed solar: {absorbed_solar:.1f} W/m^2
+  Backradiation to surface: {result.flux_down[0]:.1f} W/m^2
 """)
 
     # Sensitivity study
@@ -229,7 +235,7 @@ Flux balance:
     print("=" * 80)
 
     tau_values = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
-    print(f"\n{'τ':>6} {'T_surface (K)':>14} {'T_surface (°C)':>14} {'Warming (K)':>14}")
+    print(f"\n{'tau':>6} {'T_surface (K)':>14} {'T_surface ( degC)':>14} {'Warming (K)':>14}")
     print("-" * 60)
 
     sensitivity_results = []
@@ -242,7 +248,7 @@ Flux balance:
 
     # CO2 doubling analog
     print("\n" + "-" * 60)
-    print("CO₂ DOUBLING ANALOG:")
+    print("CO_2 DOUBLING ANALOG:")
     print("-" * 60)
 
     # Find climate sensitivity (warming from tau=1.8 to tau=2.7, ~50% increase)
@@ -253,11 +259,21 @@ Flux balance:
     T_s2, _, _ = iterative_equilibrium(tau_per2, args.n_layers, args.solar, args.albedo)
 
     print(f"""
-Increasing optical depth from {tau1} to {tau2} (~CO₂ doubling equivalent):
+Increasing optical depth from {tau1} to {tau2} (~CO_2 doubling equivalent):
   Temperature change: {T_s2 - T_s1:.1f} K
 
-This simple gray atmosphere model gives a climate sensitivity
-of ~{T_s2 - T_s1:.1f} K per CO₂ doubling (real Earth: ~2-4.5 K with feedbacks).
+IMPORTANT NOTE ON CLIMATE SENSITIVITY:
+  This gray atmosphere model gives {T_s2 - T_s1:.1f} K per "CO_2 doubling".
+
+  The REAL equilibrium climate sensitivity (ECS) is ~2.5-4 K because:
+  1. Gray model ignores spectral details (CO_2 absorbs only specific bands)
+  2. Gray model ignores water vapor feedback (amplifies warming by ~2x)
+  3. Gray model ignores cloud feedbacks (uncertain, +/- effects)
+  4. Gray model ignores ice-albedo feedback (amplifies warming)
+  5. The 50% tau increase here doesn't match actual CO_2 radiative forcing
+
+  Actual CO_2 doubling forcing: ~3.7 W/m^2 -> ~3 K warming (best estimate).
+  IPCC AR6 likely range: 2.5-4.0 K (very likely: 2.0-5.0 K)
 """)
 
     # Plotting
@@ -280,7 +296,7 @@ of ~{T_s2 - T_s1:.1f} K per CO₂ doubling (real Earth: ~2-4.5 K with feedbacks)
             ax1.axhline(0, color='brown', linewidth=3, label='Surface')
             ax1.set_xlabel('Temperature (K)')
             ax1.set_ylabel('Atmospheric Layer')
-            ax1.set_title(f'Temperature Profile (τ = {args.tau})')
+            ax1.set_title(f'Temperature Profile (tau = {args.tau})')
             ax1.legend()
             ax1.grid(True, alpha=0.3)
 
@@ -290,8 +306,8 @@ of ~{T_s2 - T_s1:.1f} K per CO₂ doubling (real Earth: ~2-4.5 K with feedbacks)
             ax2.plot(result.flux_up, z_levels, 'r-', linewidth=2, label='Upward LW')
             ax2.plot(result.flux_down, z_levels, 'b-', linewidth=2, label='Downward LW')
             ax2.axvline(absorbed_solar, color='orange', linestyle='--',
-                       linewidth=2, label=f'Absorbed solar = {absorbed_solar:.0f} W/m²')
-            ax2.set_xlabel('Flux (W/m²)')
+                       linewidth=2, label=f'Absorbed solar = {absorbed_solar:.0f} W/m^2')
+            ax2.set_xlabel('Flux (W/m^2)')
             ax2.set_ylabel('Atmospheric Level')
             ax2.set_title('Thermal Flux Profiles')
             ax2.legend()
@@ -305,30 +321,30 @@ of ~{T_s2 - T_s1:.1f} K per CO₂ doubling (real Earth: ~2-4.5 K with feedbacks)
 
             ax3.plot(taus, temps, 'ro-', linewidth=2, markersize=8)
             ax3.axhline(288, color='green', linestyle='--', alpha=0.7,
-                       label='Actual Earth T_surface ≈ 288 K')
+                       label='Actual Earth T_surface ~ 288 K')
             ax3.axhline(T_eff, color='blue', linestyle='--', alpha=0.7,
                        label=f'Effective T = {T_eff:.0f} K')
-            ax3.set_xlabel('Infrared Optical Depth (τ)')
+            ax3.set_xlabel('Infrared Optical Depth (tau)')
             ax3.set_ylabel('Surface Temperature (K)')
             ax3.set_title('Surface Temperature vs Optical Depth')
             ax3.legend()
             ax3.grid(True, alpha=0.3)
 
-            # Add secondary y-axis for °C
+            # Add secondary y-axis for  degC
             ax3b = ax3.twinx()
             ax3b.set_ylim(ax3.get_ylim()[0] - 273.15, ax3.get_ylim()[1] - 273.15)
-            ax3b.set_ylabel('Temperature (°C)')
+            ax3b.set_ylabel('Temperature ( degC)')
 
             # Plot 4: Greenhouse warming
             ax4 = axes[1, 1]
             ax4.bar(taus, warmings, width=0.3, color='red', alpha=0.7)
-            ax4.set_xlabel('Infrared Optical Depth (τ)')
+            ax4.set_xlabel('Infrared Optical Depth (tau)')
             ax4.set_ylabel('Greenhouse Warming (K)')
             ax4.set_title('Greenhouse Warming vs Optical Depth')
             ax4.grid(True, alpha=0.3, axis='y')
 
             # Add annotation
-            ax4.annotate(f'Earth-like\n(τ≈{args.tau})',
+            ax4.annotate(f'Earth-like\n(tau~{args.tau})',
                         xy=(args.tau, T_surface - T_eff),
                         xytext=(args.tau + 0.5, T_surface - T_eff + 5),
                         arrowprops=dict(arrowstyle='->', color='black'),
@@ -355,7 +371,7 @@ THE GREENHOUSE EFFECT:
 2. ATMOSPHERIC ABSORPTION:
    - Atmosphere is transparent to solar radiation
    - Atmosphere ABSORBS infrared (thermal) radiation
-   - Main absorbers: H₂O, CO₂, CH₄, N₂O, O₃
+   - Main absorbers: H_2O, CO_2, CH_4, N_2O, O_3
 
 3. THE WARMING MECHANISM:
    - Surface emits IR upward
@@ -364,12 +380,12 @@ THE GREENHOUSE EFFECT:
    - Surface must be warmer to balance absorbed solar + backradiation
 
 4. INCREASING GREENHOUSE GASES:
-   - More CO₂ → Higher optical depth τ
-   - Higher τ → More backradiation
-   - More backradiation → Warmer surface
+   - More CO_2 -> Higher optical depth tau
+   - Higher tau -> More backradiation
+   - More backradiation -> Warmer surface
 
 5. CLIMATE SENSITIVITY:
-   - Doubling CO₂ increases τ by ~10-15%
+   - Doubling CO_2 increases tau by ~10-15%
    - Direct warming: ~1 K
    - With feedbacks (water vapor, ice-albedo): ~2-4.5 K
 """)

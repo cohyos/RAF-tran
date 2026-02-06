@@ -1,0 +1,43 @@
+# RAF-tran Requirements
+# =====================
+# Atmospheric Radiative Transfer Library
+#
+# Install with: pip install -r requirements.txt
+# Or install package with: pip install -e .
+#
+# For development: pip install -r requirements-dev.txt
+
+# =============================================================================
+# Core dependencies (required)
+# =============================================================================
+numpy>=1.21.0
+scipy>=1.7.0
+
+# JAX for accelerated numerical computing
+jax>=0.4.0
+jaxlib>=0.4.0
+
+# =============================================================================
+# Visualization (required for plots and examples)
+# =============================================================================
+matplotlib>=3.5.0
+
+# =============================================================================
+# Configuration file support (required for YAML scenarios)
+# =============================================================================
+pyyaml>=6.0
+
+# =============================================================================
+# PDF report generation (required for generate_report.py)
+# =============================================================================
+reportlab>=4.0.0
+Pillow>=9.0.0
+
+# =============================================================================
+# Notes
+# =============================================================================
+# - Python 3.9+ required
+# - All examples require matplotlib for plotting
+# - YAML config files require pyyaml
+# - PDF report generation requires reportlab and Pillow
+# - For GPU acceleration with JAX, install jax[cuda] or jax[metal]

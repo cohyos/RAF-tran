@@ -189,3 +189,229 @@ class TestLognormalDistribution:
         peak_r = r[peak_idx]
 
         assert np.isclose(peak_r, r_mode, rtol=0.1)
+
+
+class TestMieRayleighLimit:
+    """
+    Tests validating Mie scattering converges to Rayleigh in the small particle limit.
+
+    For x = 2πr/λ << 1 (Rayleigh regime):
+    - Extinction efficiency: Q_ext ≈ (8/3) x⁴ |K|² where K = (m²-1)/(m²+2)
+    - Scattering efficiency: Q_sca ≈ (8/3) x⁴ |K|²
+    - Asymmetry parameter: g → 0
+
+    Reference:
+    Bohren, C.F. and Huffman, D.R. (1983). Absorption and Scattering
+    of Light by Small Particles. Wiley.
+    """
+
+    def test_rayleigh_limit_x4_dependence(self):
+        """Test Q_ext ∝ x⁴ in Rayleigh limit."""
+        from raf_tran.scattering.mie import mie_efficiencies
+
+        m = 1.5 + 0j
+        x_values = np.array([0.001, 0.01, 0.05])
+
+        Q_ext_values = []
+        for x in x_values:
+            Q_ext, _, _, _ = mie_efficiencies(x, m)
+            Q_ext_values.append(Q_ext)
+
+        Q_ext_values = np.array(Q_ext_values)
+
+        # Check x⁴ scaling: Q(x1)/Q(x2) should equal (x1/x2)⁴
+        for i in range(len(x_values) - 1):
+            ratio = Q_ext_values[i] / Q_ext_values[i + 1]
+            expected_ratio = (x_values[i] / x_values[i + 1]) ** 4
+            assert np.isclose(ratio, expected_ratio, rtol=0.05), \
+                f"Failed x⁴ scaling: got ratio {ratio:.4f}, expected {expected_ratio:.4f}"
+
+    def test_rayleigh_limit_formula(self):
+        """Test Q_ext matches Rayleigh formula for small x."""
+        from raf_tran.scattering.mie import mie_efficiencies
+
+        m = 1.5 + 0j
+        x = 0.01
+
+        # Rayleigh formula: Q_ext = (8/3) x⁴ Re[K²] where K = (m²-1)/(m²+2)
+        m2 = m ** 2
+        K = (m2 - 1) / (m2 + 2)
+        K_sq_real = np.abs(K) ** 2  # |K|² for scattering
+        Q_rayleigh = (8/3) * x**4 * K_sq_real
+
+        Q_ext, Q_sca, Q_abs, _ = mie_efficiencies(x, m)
+
+        # Mie should match Rayleigh within a few percent for x=0.01
+        assert np.isclose(Q_ext, Q_rayleigh, rtol=0.05), \
+            f"Q_ext mismatch: Mie={Q_ext:.6e}, Rayleigh={Q_rayleigh:.6e}"
+
+    def test_rayleigh_limit_asymmetry_zero(self):
+        """Test asymmetry parameter g → 0 in Rayleigh limit."""
+        from raf_tran.scattering.mie import mie_efficiencies
+
+        m = 1.5 + 0j
+        x_values = [0.001, 0.01, 0.05]
+
+        for x in x_values:
+            _, _, _, g = mie_efficiencies(x, m)
+            # g should be very small for Rayleigh regime
+            assert np.abs(g) < 0.1, \
+                f"Asymmetry g={g:.4f} too large for x={x} (Rayleigh limit)"
+
+    def test_rayleigh_limit_no_absorption(self):
+        """Test Q_abs ≈ 0 for real refractive index in Rayleigh limit."""
+        from raf_tran.scattering.mie import mie_efficiencies
+
+        m = 1.5 + 0j  # Non-absorbing
+        x = 0.01
+
+        _, _, Q_abs, _ = mie_efficiencies(x, m)
+
+        # For non-absorbing particle, Q_abs should be essentially zero
+        assert np.abs(Q_abs) < 1e-10, \
+            f"Q_abs={Q_abs:.6e} should be zero for non-absorbing particle"
+
+    def test_rayleigh_limit_energy_conservation(self):
+        """Test Q_ext = Q_sca + Q_abs in Rayleigh limit."""
+        from raf_tran.scattering.mie import mie_efficiencies
+
+        # Test with absorbing particle
+        m = 1.5 + 0.01j
+        x = 0.01
+
+        Q_ext, Q_sca, Q_abs, _ = mie_efficiencies(x, m)
+
+        # Energy conservation
+        assert np.isclose(Q_ext, Q_sca + Q_abs, rtol=1e-6), \
+            f"Energy conservation violated: Q_ext={Q_ext:.6e}, Q_sca+Q_abs={Q_sca+Q_abs:.6e}"
+
+    def test_rayleigh_limit_absorption_imaginary_index(self):
+        """Test absorption increases with imaginary refractive index."""
+        from raf_tran.scattering.mie import mie_efficiencies
+
+        x = 0.01
+        k_values = [0.001, 0.01, 0.1]  # Increasing imaginary part
+
+        Q_abs_values = []
+        for k in k_values:
+            m = 1.5 + k * 1j
+            _, _, Q_abs, _ = mie_efficiencies(x, m)
+            Q_abs_values.append(Q_abs)
+
+        # Q_abs should increase with k
+        for i in range(len(Q_abs_values) - 1):
+            assert Q_abs_values[i] < Q_abs_values[i + 1], \
+                f"Q_abs not increasing with imaginary index"
+
+    def test_rayleigh_cross_section_vs_mie(self):
+        """Compare Rayleigh cross section function to Mie for small particles."""
+        from raf_tran.scattering.mie import mie_efficiencies
+        from raf_tran.scattering import rayleigh_cross_section
+
+        # Use a very small particle (x << 1)
+        wavelength = 0.55  # μm
+        radius = 0.001  # μm (1 nm particle)
+        x = 2 * np.pi * radius / wavelength  # ≈ 0.011
+
+        # Rayleigh cross section (for molecules)
+        sigma_ray = rayleigh_cross_section(np.array([wavelength]))[0]
+
+        # Mie cross section
+        # For air molecules, effective "radius" would give similar cross section
+        # This is more of a sanity check than exact comparison
+        m = 1.0003 + 0j  # Near unity for air
+        Q_ext, _, _, _ = mie_efficiencies(x, m)
+        sigma_mie = Q_ext * np.pi * radius**2  # geometric cross section in μm²
+
+        # The Mie cross section for a 1nm particle with n≈1 should be tiny
+        # Just verify it's physically reasonable (positive)
+        assert sigma_mie > 0
+        assert sigma_ray > 0
+
+
+class TestRayleighLambdaDependence:
+    """
+    Tests for Rayleigh wavelength dependence.
+
+    Note: The actual wavelength dependence is approximately λ⁻⁴ but includes
+    small corrections from the refractive index dispersion and depolarization
+    factor (King factor). See Bodhaine et al. (1999).
+
+    Reference:
+    Bodhaine, B.A., et al. (1999). On Rayleigh Optical Depth Calculations.
+    J. Atmos. Ocean. Tech., 16, 1854-1861.
+    """
+
+    def test_lambda4_ratio_multiple_wavelengths(self):
+        """Test approximate λ⁻⁴ dependence across visible spectrum."""
+        from raf_tran.scattering import rayleigh_cross_section
+
+        wavelengths = np.array([0.35, 0.45, 0.55, 0.65, 0.75, 0.85])  # μm
+        sigma = rayleigh_cross_section(wavelengths)
+
+        # Normalize to 0.55 μm
+        sigma_norm = sigma / sigma[2]
+        expected_norm = (wavelengths[2] / wavelengths) ** 4
+
+        # Check each ratio - allow 10% tolerance due to refractive index
+        # dispersion and depolarization factor corrections
+        for i, wl in enumerate(wavelengths):
+            assert np.isclose(sigma_norm[i], expected_norm[i], rtol=0.10), \
+                f"λ⁻⁴ dependence failed at {wl:.2f}μm: got {sigma_norm[i]:.4f}, expected {expected_norm[i]:.4f}"
+
+    def test_blue_stronger_than_red(self):
+        """Test blue light scatters more than red (why sky is blue)."""
+        from raf_tran.scattering import rayleigh_cross_section
+
+        blue = 0.45   # μm
+        green = 0.55  # μm
+        red = 0.65    # μm
+
+        sigma = rayleigh_cross_section(np.array([blue, green, red]))
+
+        # Blue should scatter most, red least
+        assert sigma[0] > sigma[1] > sigma[2], \
+            "Rayleigh scattering should be strongest for blue light"
+
+        # Blue/red ratio should be approximately (0.65/0.45)⁴ ≈ 4.35
+        # Allow 5% tolerance for refractive index corrections
+        ratio = sigma[0] / sigma[2]
+        expected = (red / blue) ** 4
+        assert np.isclose(ratio, expected, rtol=0.05), \
+            f"Blue/red ratio: got {ratio:.2f}, expected {expected:.2f}"
+
+    def test_cross_section_literature_value(self):
+        """Test cross section matches literature at 550nm."""
+        from raf_tran.scattering import rayleigh_cross_section
+
+        # At 550 nm, σ ≈ 4.5e-31 m² (Bodhaine et al., 1999)
+        sigma = rayleigh_cross_section(np.array([0.55]))[0]
+
+        # Convert to m² if necessary (assuming function returns m²)
+        # Allow 10% tolerance for different formulations
+        assert 3e-31 < sigma < 6e-31, \
+            f"Cross section at 550nm: got {sigma:.3e}m², expected ~4.5e-31 m²"
+
+    def test_optical_depth_vertical_column(self):
+        """Test Rayleigh optical depth for standard atmosphere."""
+        from raf_tran.scattering import RayleighScattering
+        from raf_tran.atmosphere import StandardAtmosphere
+
+        rayleigh = RayleighScattering()
+        atmosphere = StandardAtmosphere()
+
+        # Create atmospheric column
+        z = np.linspace(0, 100000, 1001)  # 0-100 km
+        dz = np.diff(z)
+        z_mid = (z[:-1] + z[1:]) / 2
+        n = atmosphere.number_density(z_mid)
+
+        # Calculate optical depth at 550 nm
+        wavelength = np.array([0.55])
+        tau = rayleigh.optical_depth(wavelength, n, dz)
+        tau_total = tau.sum()
+
+        # Expected Rayleigh optical depth at 550 nm is ~0.097
+        # (see Bodhaine et al., 1999, Table 1)
+        assert 0.08 < tau_total < 0.12, \
+            f"Total Rayleigh optical depth at 550nm: got {tau_total:.4f}, expected ~0.097"

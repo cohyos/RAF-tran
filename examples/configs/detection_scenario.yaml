@@ -1,0 +1,132 @@
+# Detection Scenario Configuration
+# =================================
+# This file defines a complete detection scenario for FPA comparison.
+# Use with: python 34_fpa_detection_comparison.py --config configs/detection_scenario.yaml
+#
+# Features:
+# - 3-way detector comparison: InSb MWIR (analog), MCT LWIR (analog), Digital LWIR (DROIC)
+# - Monte Carlo uncertainty analysis with configurable distributions
+# - Multiple target types with aspect variations
+
+name: "Multi-Target Detection Comparison"
+description: "Compare InSb MWIR, MCT LWIR (analog), and Digital LWIR (DROIC) detection capabilities"
+
+# Environmental and geometry parameters
+scenario:
+  sensor_altitude_km: 0.0       # Ground-based sensor
+  target_altitude_km: 10.0      # Typical cruise altitude
+  visibility_km: 23.0           # Standard clear day visibility
+  humidity_percent: 50.0        # Moderate humidity
+  snr_threshold: 5.0            # Detection SNR threshold
+  max_range_km: 100.0           # Maximum analysis range
+
+# Detector specifications
+detectors:
+  - name: "InSb MWIR (Analog)"
+    type: "insb"                # Indium Antimonide (3-5 um)
+    pixel_pitch: 15.0           # um
+    f_number: 2.0
+    integration_time: 10.0      # ms
+
+  - name: "MCT LWIR (Analog)"
+    type: "mct_lwir"            # Mercury Cadmium Telluride (8-12 um)
+    pixel_pitch: 20.0           # um
+    f_number: 2.0
+    integration_time: 10.0      # ms
+
+  - name: "Digital LWIR (DROIC)"
+    type: "digital_lwir"        # Digital Read-Out IC (8-12 um)
+    pixel_pitch: 15.0           # um
+    f_number: 2.0
+    integration_time: 10.0      # ms
+    well_capacity: 4.0e6        # 4M electrons (4x analog)
+    read_noise: 50.0            # 50e RMS (vs 150e analog)
+
+# Target specifications
+targets:
+  - name: "Fighter (Rear)"
+    type: "fighter"
+    aspect: "rear"
+    afterburner: false
+    mach: 0.9
+    characteristic_dimension_m: 15.0
+
+  - name: "Fighter AB (Rear)"
+    type: "fighter"
+    aspect: "rear"
+    afterburner: true
+    mach: 1.2
+    characteristic_dimension_m: 15.0
+
+  - name: "Fighter (Side)"
+    type: "fighter"
+    aspect: "side"
+    afterburner: false
+    mach: 0.9
+    characteristic_dimension_m: 15.0
+
+  - name: "Transport (Rear)"
+    type: "transport"
+    aspect: "rear"
+    mach: 0.8
+    characteristic_dimension_m: 60.0
+
+  - name: "UAV (Rear)"
+    type: "uav"
+    aspect: "rear"
+    mach: 0.4
+    characteristic_dimension_m: 3.0
+
+# Types of analysis to perform
+analysis_types:
+  - detection_range      # SNR-based detection range
+  - recognition_range    # Johnson criteria ranges
+  - johnson_probability  # Probability curves
+
+# Johnson criteria target probability
+johnson_probability: 0.5
+
+# Monte Carlo configuration (NEW)
+# Enables uncertainty analysis by sampling parameter distributions
+monte_carlo:
+  enabled: true                 # Enable Monte Carlo simulation
+  samples: 1000                 # Number of samples (use 100 for quick runs)
+  seed: null                    # Random seed for reproducibility (null = random)
+
+  # Target parameter variations
+  target_variations:
+    delta_temp:                 # Exhaust temperature variation (K)
+      distribution: "normal"
+      mean: 0.0
+      std: 50.0
+    area_factor:                # Signature area multiplier
+      distribution: "lognormal"
+      mean: 1.0
+      std: 0.15
+    emissivity_factor:          # Emissivity variation
+      distribution: "triangular"
+      min: 0.9
+      mode: 1.0
+      max: 1.1
+
+  # Sensor parameter variations
+  sensor_variations:
+    d_star_factor:              # Detectivity variation
+      distribution: "lognormal"
+      mean: 1.0
+      std: 0.1
+    read_noise_factor:          # Read noise variation
+      distribution: "lognormal"
+      mean: 1.0
+      std: 0.1
+
+  # Atmospheric parameter variations
+  atmosphere_variations:
+    visibility_km:              # Visibility (km)
+      distribution: "normal"
+      mean: 23.0
+      std: 5.0
+    humidity_percent:           # Relative humidity (%)
+      distribution: "normal"
+      mean: 50.0
+      std: 10.0

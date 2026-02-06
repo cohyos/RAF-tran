@@ -40,7 +40,7 @@ class CKDTable:
     g_weights : ndarray
         Gauss-Legendre quadrature weights, shape (n_g,)
     k_coefficients : ndarray
-        Absorption coefficients in m²/mol, shape (n_press, n_temp, n_g)
+        Absorption coefficients in m^2/mol, shape (n_press, n_temp, n_g)
     """
 
     gas_name: str
@@ -215,16 +215,16 @@ class GasOptics:
             # Interpolate k-coefficients
             k = ckd_table.interpolate_k(pressure, temperature)  # (n_layers, n_g)
 
-            # Gas column amount: N_gas = vmr * n_air * dz [molecules/m²]
+            # Gas column amount: N_gas = vmr * n_air * dz [molecules/m^2]
             gas_vmr = np.asarray(vmr[gas_name])
-            column_amount = gas_vmr * number_density * dz  # molecules/m²
+            column_amount = gas_vmr * number_density * dz  # molecules/m^2
 
-            # Convert to mol/m² for k in m²/mol
+            # Convert to mol/m^2 for k in m^2/mol
             from raf_tran.utils.constants import AVOGADRO
 
-            column_amount_mol = column_amount / AVOGADRO  # mol/m²
+            column_amount_mol = column_amount / AVOGADRO  # mol/m^2
 
-            # Optical depth: τ = k * column_amount
+            # Optical depth: tau = k * column_amount
             tau_gas = k * column_amount_mol[:, np.newaxis]
             tau_total += tau_gas
 
@@ -238,14 +238,14 @@ def compute_optical_depth(
     """
     Compute optical depth from k-coefficients and column amount.
 
-    τ = k × column_amount
+    tau = k x column_amount
 
     Parameters
     ----------
     k_coefficients : array_like
-        Absorption coefficient in m²/mol, shape (n_layers, n_g)
+        Absorption coefficient in m^2/mol, shape (n_layers, n_g)
     column_amount : array_like
-        Column amount in mol/m², shape (n_layers,)
+        Column amount in mol/m^2, shape (n_layers,)
 
     Returns
     -------
@@ -279,7 +279,7 @@ def create_simple_ckd_table(
     n_g_points : int
         Number of g-points (default: 8)
     reference_k : float
-        Reference absorption coefficient in m²/mol
+        Reference absorption coefficient in m^2/mol
 
     Returns
     -------

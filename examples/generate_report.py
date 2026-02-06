@@ -45,6 +45,7 @@ except ImportError:
 
 
 EXAMPLES = [
+    # Core Examples (Demonstration)
     ("01_solar_zenith_angle_study.py", "Solar Zenith Angle Effects"),
     ("02_spectral_transmission.py", "Spectral Transmission (Sky Color)"),
     ("03_aerosol_types_comparison.py", "Aerosol Types Comparison"),
@@ -55,6 +56,34 @@ EXAMPLES = [
     ("08_ozone_uv_absorption.py", "Ozone UV Absorption"),
     ("09_radiative_heating_rates.py", "Radiative Heating Rates"),
     ("10_satellite_observation.py", "Satellite Observation Simulation"),
+    ("11_atmospheric_turbulence.py", "Atmospheric Turbulence (Cn2, Fried)"),
+    # Validation Examples (Physics Verification)
+    ("12_beer_lambert_validation.py", "Beer-Lambert Law Validation"),
+    ("13_planck_blackbody_validation.py", "Planck Blackbody Validation"),
+    ("14_rayleigh_scattering_validation.py", "Rayleigh Scattering Validation"),
+    ("15_mie_scattering_validation.py", "Mie Scattering Validation"),
+    ("16_two_stream_benchmarks.py", "Two-Stream Solver Benchmarks"),
+    ("17_solar_spectrum_analysis.py", "Solar Spectrum Analysis"),
+    ("18_thermal_emission_validation.py", "Thermal Emission Validation"),
+    ("19_path_radiance_remote_sensing.py", "Path Radiance Remote Sensing"),
+    ("20_visibility_contrast.py", "Visibility and Contrast"),
+    ("21_laser_propagation.py", "Laser Propagation"),
+    # Advanced Applications
+    ("22_atmospheric_polarization.py", "Atmospheric Polarization"),
+    ("23_infrared_atmospheric_windows.py", "IR Atmospheric Windows"),
+    ("24_volcanic_aerosol_forcing.py", "Volcanic Aerosol Forcing"),
+    ("25_water_vapor_feedback.py", "Water Vapor Feedback"),
+    ("26_high_altitude_solar.py", "High Altitude Solar Radiation"),
+    ("27_twilight_spectra.py", "Twilight Spectra"),
+    ("28_multi_layer_cloud.py", "Multi-Layer Cloud Overlap"),
+    ("29_aod_retrieval_visibility.py", "AOD Retrieval and Visibility"),
+    ("30_spectral_surface_albedo.py", "Spectral Surface Albedo"),
+    ("31_limb_viewing_geometry.py", "Limb Viewing Geometry"),
+    ("32_config_file_demo.py", "Configuration File Usage"),
+    ("33_validation_visualization.py", "Physics Validation Visualization"),
+    # Detection Applications
+    ("34_fpa_detection_comparison.py", "FPA Detection Range Comparison"),
+    ("35_fpa_altitude_detection_study.py", "FPA Altitude Detection Study"),
 ]
 
 
@@ -69,6 +98,10 @@ def parse_args():
     parser.add_argument(
         "--no-run", action="store_true",
         help="Don't run examples, just collect existing outputs"
+    )
+    parser.add_argument(
+        "--max-lines", type=int, default=0,
+        help="Max output lines per example (0 = unlimited, default: unlimited)"
     )
     return parser.parse_args()
 
@@ -96,6 +129,83 @@ def run_example(filename, work_dir):
         return f"ERROR: {str(e)}", False
 
 
+def parse_readme_sections(readme_path):
+    """Parse README.md into sections for the report."""
+    sections = {}
+    current_section = None
+    current_content = []
+
+    try:
+        with open(readme_path, encoding='utf-8') as f:
+            lines = f.readlines()
+
+        for line in lines:
+            # Detect section headers (## or ###)
+            if line.startswith('## '):
+                if current_section:
+                    sections[current_section] = ''.join(current_content).strip()
+                current_section = line[3:].strip()
+                current_content = []
+            elif line.startswith('### '):
+                # Subsections - append to current section
+                if current_section:
+                    current_content.append(f"\n**{line[4:].strip()}**\n")
+            else:
+                if current_section:
+                    current_content.append(line)
+
+        # Save last section
+        if current_section:
+            sections[current_section] = ''.join(current_content).strip()
+
+    except Exception as e:
+        sections['Error'] = f"Could not parse README: {e}"
+
+    return sections
+
+
+def get_scientific_references():
+    """Return list of scientific references for the report."""
+    return [
+        # Atmospheric radiative transfer
+        ("Bodhaine, B. A., Wood, N. B., Dutton, E. G., & Slusser, J. R. (1999). "
+         "On Rayleigh optical depth calculations. J. Atmos. Oceanic Technol., 16(11), 1854-1861."),
+
+        ("Bohren, C. F., & Huffman, D. R. (1983). Absorption and Scattering of Light "
+         "by Small Particles. Wiley."),
+
+        ("Meador, W. E., & Weaver, W. R. (1980). Two-stream approximations to radiative "
+         "transfer in planetary atmospheres: A unified description of existing methods. "
+         "J. Atmos. Sci., 37(3), 630-643."),
+
+        ("Toon, O. B., McKay, C. P., Ackerman, T. P., & Santhanam, K. (1989). Rapid calculation "
+         "of radiative heating rates and photodissociation rates in inhomogeneous multiple "
+         "scattering atmospheres. J. Geophys. Res., 94(D13), 16287-16301."),
+
+        ("Lacis, A. A., & Oinas, V. (1991). A description of the correlated k-distribution "
+         "method for modeling nongray gaseous absorption. J. Geophys. Res., 96(D5), 9027-9063."),
+
+        # IR detection and FPA
+        ("Johnson, J. (1958). Analysis of image forming systems. Image Intensifier Symposium, "
+         "Fort Belvoir, VA: Army Engineer Research and Development Laboratories."),
+
+        ("Rogalski, A. (2011). Infrared Detectors (2nd ed.). CRC Press."),
+
+        ("Hudson, R. D. (1969). Infrared System Engineering. Wiley."),
+
+        # Digital ROIC technology
+        ("Sizov, F. (2018). Brief history of THz and IR technologies. Semiconductor Physics, "
+         "Quantum Electronics & Optoelectronics, 21(1), 6-28."),
+
+        # Atmospheric turbulence
+        ("Hufnagel, R. E., & Stanley, N. R. (1964). Modulation transfer function associated "
+         "with image transmission through turbulent media. JOSA, 54(1), 52-61."),
+
+        ("Andrews, L. C., & Phillips, R. L. (2005). Laser Beam Propagation through Random Media "
+         "(2nd ed.). SPIE Press."),
+    ]
+
+
 def find_plot_for_example(filename, work_dir):
     """Find the plot file generated by an example."""
     # Common plot naming patterns
@@ -117,6 +227,31 @@ def find_plot_for_example(filename, work_dir):
         "08_ozone_uv_absorption.py": "ozone_uv_absorption.png",
         "09_radiative_heating_rates.py": "radiative_heating_rates.png",
         "10_satellite_observation.py": "satellite_observation.png",
+        "11_atmospheric_turbulence.py": "atmospheric_turbulence.png",
+        "12_beer_lambert_validation.py": "beer_lambert_validation.png",
+        "13_planck_blackbody_validation.py": "planck_blackbody_validation.png",
+        "14_rayleigh_scattering_validation.py": "rayleigh_scattering_validation.png",
+        "15_mie_scattering_validation.py": "mie_scattering_validation.png",
+        "16_two_stream_benchmarks.py": "two_stream_benchmarks.png",
+        "17_solar_spectrum_analysis.py": "solar_spectrum_analysis.png",
+        "18_thermal_emission_validation.py": "thermal_emission_validation.png",
+        "19_path_radiance_remote_sensing.py": "path_radiance_remote_sensing.png",
+        "20_visibility_contrast.py": "visibility_contrast.png",
+        "21_laser_propagation.py": "laser_propagation.png",
+        "22_atmospheric_polarization.py": "atmospheric_polarization.png",
+        "23_infrared_atmospheric_windows.py": "infrared_atmospheric_windows.png",
+        "24_volcanic_aerosol_forcing.py": "volcanic_aerosol_forcing.png",
+        "25_water_vapor_feedback.py": "water_vapor_feedback.png",
+        "26_high_altitude_solar.py": "high_altitude_solar.png",
+        "27_twilight_spectra.py": "twilight_spectra.png",
+        "28_multi_layer_cloud.py": "multi_layer_cloud.png",
+        "29_aod_retrieval_visibility.py": "aod_visibility.png",
+        "30_spectral_surface_albedo.py": "spectral_albedo.png",
+        "31_limb_viewing_geometry.py": "limb_viewing.png",
+        "32_config_file_demo.py": "config_file_demo.png",
+        "33_validation_visualization.py": "validation_visualization.png",
+        "34_fpa_detection_comparison.py": "fpa_detection.png",
+        "35_fpa_altitude_detection_study.py": "fpa_altitude_study.png",
     }
 
     if filename in plot_mappings:
@@ -134,8 +269,18 @@ def find_plot_for_example(filename, work_dir):
     return None
 
 
-def create_pdf_report(results, output_path):
-    """Create PDF report from results."""
+def create_pdf_report(results, output_path, max_lines=0):
+    """Create PDF report from results.
+
+    Parameters
+    ----------
+    results : list
+        List of (filename, description, output, success, plot_path) tuples
+    output_path : Path
+        Output PDF path
+    max_lines : int
+        Maximum lines per example output (0 = unlimited)
+    """
     if not REPORTLAB_AVAILABLE:
         print("ERROR: reportlab not available. Cannot create PDF.")
         print("Install with: pip install reportlab Pillow")
@@ -193,7 +338,7 @@ def create_pdf_report(results, output_path):
     # Summary table
     summary_data = [["#", "Example", "Status"]]
     for filename, description, output, success, plot_path in results:
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[X] FAIL"
         num = filename.split("_")[0]
         summary_data.append([num, description[:40], status])
 
@@ -211,6 +356,55 @@ def create_pdf_report(results, output_path):
     ]))
     story.append(summary_table)
     story.append(PageBreak())
+
+    # README Chapter - Add overview from README.md
+    readme_path = Path(__file__).parent.parent / 'README.md'
+    print(f"Looking for README at: {readme_path}")
+    if readme_path.exists():
+        story.append(Paragraph("RAF-tran Overview", heading_style))
+        story.append(Spacer(1, 0.1*inch))
+
+        readme_sections = parse_readme_sections(readme_path)
+        priority_sections = ['Overview', 'Features', 'Quick Start', 'Architecture']
+
+        print(f"Found sections: {list(readme_sections.keys())}")
+
+        for section_name in priority_sections:
+            if section_name in readme_sections:
+                story.append(Paragraph(section_name, styles['Heading3']))
+                # Truncate very long sections
+                content = readme_sections[section_name]
+                print(f"  {section_name}: {len(content)} chars")
+                if len(content) > 2000:
+                    content = content[:2000] + "\n\n[... truncated for brevity ...]"
+                # Clean up markdown syntax for PDF
+                content = content.replace('```python', '').replace('```bash', '').replace('```', '')
+                content = content.replace('**', '').replace('`', '')
+                # Escape special characters for XML
+                content = content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+                # Use Paragraph instead of Preformatted for better rendering
+                # Split into paragraphs for better formatting
+                paragraphs = content.split('\n\n')
+                for para in paragraphs:
+                    if para.strip():
+                        # Replace newlines with <br/> for single line breaks
+                        para_text = para.strip().replace('\n', '<br/>')
+                        try:
+                            story.append(Paragraph(para_text, styles['Normal']))
+                            story.append(Spacer(1, 0.05*inch))
+                        except Exception as e:
+                            print(f"    Error rendering paragraph: {e}")
+                            # Fallback to preformatted
+                            story.append(Preformatted(para.strip(), code_style))
+
+                story.append(Spacer(1, 0.15*inch))
+            else:
+                print(f"  {section_name}: NOT FOUND")
+
+        story.append(PageBreak())
+    else:
+        print(f"README not found at: {readme_path}")
 
     # Each example
     for filename, description, output, success, plot_path in results:
@@ -238,13 +432,12 @@ def create_pdf_report(results, output_path):
             except Exception as e:
                 story.append(Paragraph(f"[Could not load plot: {e}]", styles['Normal']))
 
-        # Console output (truncated if too long)
+        # Console output (truncated if limit set)
         story.append(Paragraph("Console Output:", styles['Heading4']))
 
-        # Limit output length
-        max_lines = 80
+        # Limit output length (0 = unlimited)
         output_lines = output.split('\n')
-        if len(output_lines) > max_lines:
+        if max_lines > 0 and len(output_lines) > max_lines:
             truncated_output = '\n'.join(output_lines[:max_lines])
             truncated_output += f"\n\n... [{len(output_lines) - max_lines} more lines truncated]"
         else:
@@ -255,6 +448,23 @@ def create_pdf_report(results, output_path):
 
         story.append(Preformatted(safe_output, code_style))
         story.append(PageBreak())
+
+    # References Chapter - Add scientific references at the end
+    story.append(Paragraph("References", heading_style))
+    story.append(Spacer(1, 0.2*inch))
+    story.append(Paragraph(
+        "The following scientific publications form the theoretical foundation for RAF-tran:",
+        styles['Normal']
+    ))
+    story.append(Spacer(1, 0.15*inch))
+
+    references = get_scientific_references()
+    for i, ref in enumerate(references, 1):
+        ref_text = f"[{i}] {ref}"
+        # Escape special characters
+        ref_text = ref_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        story.append(Paragraph(ref_text, styles['Normal']))
+        story.append(Spacer(1, 0.05*inch))
 
     # Build PDF
     try:
@@ -298,8 +508,8 @@ def main():
 
         plot_path = find_plot_for_example(filename, script_dir)
 
-        status = "✓" if success else "✗"
-        plot_status = "📊" if plot_path else "  "
+        status = "[OK]" if success else "[X]"
+        plot_status = "" if plot_path else "  "
         print(f"{status} {plot_status}")
 
         results.append((filename, description, output, success, plot_path))
@@ -308,10 +518,10 @@ def main():
     print("-" * 70)
     print("Generating PDF report...")
 
-    if create_pdf_report(results, pdf_path):
-        print(f"✓ Report saved to: {pdf_path}")
+    if create_pdf_report(results, pdf_path, max_lines=args.max_lines):
+        print(f"[OK] Report saved to: {pdf_path}")
     else:
-        print("✗ Failed to create PDF report")
+        print("[X] Failed to create PDF report")
 
         # Fallback: save text report
         txt_path = output_dir / f"raf_tran_examples_report_{timestamp}.txt"
@@ -331,7 +541,7 @@ def main():
                 f.write(output)
                 f.write("\n")
 
-        print(f"✓ Text report saved to: {txt_path}")
+        print(f"[OK] Text report saved to: {txt_path}")
 
     # List generated plots
     plots = list(script_dir.glob("*.png"))

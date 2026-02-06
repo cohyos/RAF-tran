@@ -35,7 +35,7 @@ except ImportError:
     sys.exit(1)
 
 
-# Ozone absorption cross sections (approximate, in cm²)
+# Ozone absorption cross sections (approximate, in cm^2)
 # Data from scientific literature (simplified)
 def ozone_cross_section(wavelength_nm):
     """
@@ -49,13 +49,13 @@ def ozone_cross_section(wavelength_nm):
     Returns
     -------
     sigma : ndarray
-        Absorption cross section in cm²
+        Absorption cross section in cm^2
     """
     wl = np.asarray(wavelength_nm)
     sigma = np.zeros_like(wl, dtype=float)
 
     # Hartley band (200-310 nm) - very strong absorption
-    # Peak around 255 nm with σ ≈ 1.1e-17 cm²
+    # Peak around 255 nm with sigma ~ 1.1e-17 cm^2
     hartley_mask = (wl >= 200) & (wl <= 310)
     if np.any(hartley_mask):
         # Gaussian approximation
@@ -85,14 +85,14 @@ UV radiation bands:
   UV-A (315-400 nm): Reaches surface, less harmful
 
 Ozone column is measured in Dobson Units (DU):
-  1 DU = 2.687e16 molecules/cm² = 0.01 mm at STP
+  1 DU = 2.687e16 molecules/cm^2 = 0.01 mm at STP
   Global average: ~300 DU
   Antarctic ozone hole: can drop below 100 DU
 
 Examples:
   %(prog)s                          # Standard atmosphere
   %(prog)s --ozone-column 200       # Depleted ozone (like ozone hole)
-  %(prog)s --sza 60                 # Sun at 60° zenith
+  %(prog)s --sza 60                 # Sun at 60 deg zenith
         """
     )
     parser.add_argument(
@@ -120,7 +120,7 @@ def main():
     print("=" * 80)
     print("OZONE LAYER AND UV ABSORPTION")
     print("=" * 80)
-    print(f"\nSolar zenith angle: {args.sza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
 
     mu0 = np.cos(np.radians(args.sza))
     if mu0 <= 0:
@@ -139,10 +139,10 @@ def main():
     n_air = atmosphere.number_density(z_mid)
     o3_vmr = atmosphere.o3_vmr(z_mid)
 
-    # Column ozone in molecules/cm²
-    o3_column_calc = np.sum(o3_vmr * n_air * dz) / 1e4  # molecules/cm²
+    # Column ozone in molecules/cm^2
+    o3_column_calc = np.sum(o3_vmr * n_air * dz) / 1e4  # molecules/cm^2
 
-    # Convert to Dobson Units (1 DU = 2.687e16 molecules/cm²)
+    # Convert to Dobson Units (1 DU = 2.687e16 molecules/cm^2)
     DU_factor = 2.687e16
     o3_DU_calc = o3_column_calc / DU_factor
 
@@ -159,7 +159,7 @@ def main():
     wavelengths = np.linspace(200, 400, 201)  # nm
 
     # Calculate ozone optical depth and transmission
-    sigma_o3 = ozone_cross_section(wavelengths)  # cm²
+    sigma_o3 = ozone_cross_section(wavelengths)  # cm^2
     tau_o3_vertical = sigma_o3 * o3_column  # optical depth
     tau_o3_slant = tau_o3_vertical / mu0  # slant path
 
@@ -176,7 +176,7 @@ def main():
         "UV-A": (315, 400, "Tanning - mostly transmitted"),
     }
 
-    print(f"\n{'UV Band':<8} {'Wavelength':>12} {'Mean τ':>10} {'Mean Trans':>12} {'Status':<25}")
+    print(f"\n{'UV Band':<8} {'Wavelength':>12} {'Mean tau':>10} {'Mean Trans':>12} {'Status':<25}")
     print("-" * 80)
 
     band_results = {}
@@ -201,8 +201,8 @@ def main():
     print("-" * 80)
 
     key_wavelengths = [254, 280, 300, 310, 320, 340, 380]
-    print(f"\n{'Wavelength':>12} {'σ_O3 (cm²)':>14} {'τ (vertical)':>14} "
-          f"{'τ (slant)':>12} {'Transmission':>14}")
+    print(f"\n{'Wavelength':>12} {'sigma_O3 (cm^2)':>14} {'tau (vertical)':>14} "
+          f"{'tau (slant)':>12} {'Transmission':>14}")
     print("-" * 80)
 
     for wl in key_wavelengths:
@@ -242,23 +242,25 @@ def main():
     print("RELATIVE UV-B INCREASE WITH OZONE DEPLETION:")
     print("-" * 60)
 
-    # Mean UV-B (280-315 nm)
+    # Mean UV-B transmission (280-315 nm)
+    # IMPORTANT: Compute transmission at each wavelength FIRST, then average
+    # (NOT: compute mean cross-section then transmission - that's wrong!)
     uvb_mask = (wavelengths >= 280) & (wavelengths <= 315)
     uvb_sigma = sigma_o3[uvb_mask]
-    uvb_mean_sigma = np.mean(uvb_sigma)
 
-    trans_normal = np.mean(np.exp(-uvb_mean_sigma * 300 * DU_factor / mu0))
-    trans_depleted = np.mean(np.exp(-uvb_mean_sigma * 200 * DU_factor / mu0))
-    trans_hole = np.mean(np.exp(-uvb_mean_sigma * 100 * DU_factor / mu0))
+    # Transmission at each UV-B wavelength for different ozone columns
+    trans_normal = np.mean(np.exp(-uvb_sigma * 300 * DU_factor / mu0))
+    trans_depleted = np.mean(np.exp(-uvb_sigma * 200 * DU_factor / mu0))
+    trans_hole = np.mean(np.exp(-uvb_sigma * 100 * DU_factor / mu0))
 
-    print(f"  300 DU → 200 DU: UV-B increases by {(trans_depleted/trans_normal - 1)*100:+.0f}%")
-    print(f"  300 DU → 100 DU: UV-B increases by {(trans_hole/trans_normal - 1)*100:+.0f}%")
+    print(f"  300 DU -> 200 DU: UV-B increases by {(trans_depleted/trans_normal - 1)*100:+.0f}%")
+    print(f"  300 DU -> 100 DU: UV-B increases by {(trans_hole/trans_normal - 1)*100:+.0f}%")
 
     print("""
 HEALTH IMPLICATIONS:
-  - Each 1% decrease in ozone → ~2% increase in UV-B at surface
-  - Each 1% increase in UV-B → ~2% increase in skin cancer risk
-  - Antarctic ozone hole (2/3 depletion) → UV-B doubles → cancer risk quadruples
+  - Each 1% decrease in ozone -> ~2% increase in UV-B at surface
+  - Each 1% increase in UV-B -> ~2% increase in skin cancer risk
+  - Antarctic ozone hole (2/3 depletion) -> UV-B doubles -> cancer risk quadruples
 """)
 
     # Plotting
@@ -267,7 +269,7 @@ HEALTH IMPLICATIONS:
             import matplotlib.pyplot as plt
 
             fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-            fig.suptitle(f'Ozone Layer and UV Absorption (O₃ = {o3_DU:.0f} DU, SZA = {args.sza}°)',
+            fig.suptitle(f'Ozone Layer and UV Absorption (O_3 = {o3_DU:.0f} DU, SZA = {args.sza} deg)',
                         fontsize=14, fontweight='bold')
 
             # Plot 1: Ozone absorption cross section
@@ -277,7 +279,7 @@ HEALTH IMPLICATIONS:
             ax1.axvspan(280, 315, alpha=0.3, color='blue', label='UV-B')
             ax1.axvspan(315, 400, alpha=0.3, color='cyan', label='UV-A')
             ax1.set_xlabel('Wavelength (nm)')
-            ax1.set_ylabel('Absorption Cross Section (cm²)')
+            ax1.set_ylabel('Absorption Cross Section (cm^2)')
             ax1.set_title('Ozone Absorption Cross Section')
             ax1.legend()
             ax1.grid(True, alpha=0.3)
@@ -302,7 +304,7 @@ HEALTH IMPLICATIONS:
 
             # Plot 3: Ozone profile
             ax3 = axes[1, 0]
-            o3_conc = o3_vmr * n_air  # molecules/m³
+            o3_conc = o3_vmr * n_air  # molecules/m^3
             o3_ppb = o3_vmr * 1e9
 
             ax3.plot(o3_ppb, z_mid / 1000, 'b-', linewidth=2)
@@ -361,12 +363,12 @@ HEALTH IMPLICATIONS:
 THE OZONE LAYER AND UV PROTECTION:
 
 1. OZONE FORMATION (Chapman Cycle):
-   - UV-C splits O₂ → 2O
-   - O + O₂ → O₃ (ozone)
+   - UV-C splits O_2 -> 2O
+   - O + O_2 -> O_3 (ozone)
    - Occurs mainly at 15-35 km altitude
 
 2. UV ABSORPTION:
-   - O₃ + UV → O₂ + O
+   - O_3 + UV -> O_2 + O
    - Strongest in Hartley band (200-310 nm)
    - Absorbs essentially all UV-C and most UV-B
 
@@ -377,13 +379,13 @@ THE OZONE LAYER AND UV PROTECTION:
 
 4. OZONE DEPLETION:
    - CFCs release chlorine in stratosphere
-   - Cl + O₃ → ClO + O₂ (catalytic destruction)
+   - Cl + O_3 -> ClO + O_2 (catalytic destruction)
    - Montreal Protocol (1987) phased out CFCs
    - Ozone layer is slowly recovering
 
 5. UNITS:
    - Dobson Unit (DU): Column ozone measurement
-   - 1 DU = 0.01 mm of pure O₃ at STP
+   - 1 DU = 0.01 mm of pure O_3 at STP
    - 300 DU = 3 mm compressed ozone
 """)
 

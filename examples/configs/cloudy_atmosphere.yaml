@@ -1,0 +1,51 @@
+# RAF-tran Cloudy Atmosphere Configuration
+# -----------------------------------------
+# Simulates radiative transfer through a stratocumulus cloud layer
+
+name: "cloudy_atmosphere"
+description: "Stratocumulus cloud layer with marine aerosols"
+
+atmosphere:
+  model: "us_standard_1976"
+  surface_pressure: 1013.25
+  surface_temperature: 290.0
+  n_layers: 60
+  top_altitude: 30.0
+
+aerosol:
+  enabled: true
+  model: "maritime"
+  aod_550: 0.15
+  single_scatter_albedo: 0.98
+  asymmetry_parameter: 0.75
+  scale_height: 1.5
+
+cloud:
+  enabled: true
+  cloud_type: "stratus"
+  cloud_base: 1.0
+  cloud_top: 2.0
+  optical_depth: 15.0
+  effective_radius: 8.0
+  liquid_water_path: 80.0
+
+surface:
+  albedo: 0.06
+  surface_type: "ocean"
+  emissivity: 0.97
+
+solar:
+  solar_zenith_angle: 45.0
+  day_of_year: 180
+
+spectral:
+  wavelength_min: 0.3
+  wavelength_max: 2.5
+  n_wavelengths: 50
+
+solver:
+  method: "delta_eddington"
+
+output:
+  compute_fluxes: true
+  compute_heating_rates: true

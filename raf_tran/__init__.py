@@ -14,8 +14,16 @@ scattering
     Rayleigh (molecular) and Mie (aerosol/particle) scattering
 rte_solver
     Radiative transfer equation solvers (two-stream, discrete ordinates)
+turbulence
+    Atmospheric optical turbulence (Cn2 profiles, scintillation, beam propagation)
+detectors
+    IR detector models (FPA detectors: InSb, MCT)
+targets
+    Target signature models (aircraft IR signatures)
+detection
+    Detection range calculations (IR range equation)
 utils
-    Utility functions and constants
+    Utility functions and constants (including air mass calculations)
 """
 
 __version__ = "0.1.0"
