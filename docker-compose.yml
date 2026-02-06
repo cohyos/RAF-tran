@@ -1,0 +1,54 @@
+# RAF-tran Docker Compose Configuration
+# =====================================
+#
+# Start the Streamlit GUI:
+#   docker-compose up gui
+#
+# Run examples:
+#   docker-compose run cli python examples/01_solar_zenith_angle_study.py --no-plot
+#
+# Interactive shell:
+#   docker-compose run cli bash
+
+version: '3.8'
+
+services:
+  # Streamlit GUI service
+  gui:
+    build: .
+    ports:
+      - "8501:8501"
+    command: streamlit run streamlit_app/app.py --server.address 0.0.0.0 --server.port 8501
+    volumes:
+      - ./outputs:/app/outputs
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # CLI service for running examples
+  cli:
+    build: .
+    volumes:
+      - ./outputs:/app/outputs
+      - ./examples:/app/examples
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+
+  # Run all examples and generate report
+  report:
+    build: .
+    volumes:
+      - ./outputs:/app/outputs
+    command: python examples/generate_report.py --output-dir /app/outputs
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # Run validation suite
+  validation:
+    build: .
+    command: python -c "from raf_tran.validation import run_all_validations; results = run_all_validations(); results.save('outputs/validation_results.json')"
+    volumes:
+      - ./outputs:/app/outputs
+    environment:
+      - PYTHONUNBUFFERED=1

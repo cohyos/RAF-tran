@@ -43,29 +43,29 @@ except ImportError:
 
 # Satellite channels (simplified representations)
 SATELLITE_CHANNELS = {
-    "VIS (0.65 μm)": {
-        "center_wl": 0.65,  # μm
+    "VIS (0.65 um)": {
+        "center_wl": 0.65,  # um
         "type": "reflective",
         "description": "Visible - clouds and surface reflectance"
     },
-    "NIR (0.86 μm)": {
+    "NIR (0.86 um)": {
         "center_wl": 0.86,
         "type": "reflective",
         "description": "Near-IR - vegetation, clouds"
     },
-    "IR Window (11 μm)": {
-        "center_wn": 909,  # cm⁻¹
+    "IR Window (11 um)": {
+        "center_wn": 909,  # cm-^-1
         "type": "thermal",
         "description": "IR window - surface/cloud temperature"
     },
-    "Water Vapor (6.7 μm)": {
-        "center_wn": 1493,  # cm⁻¹
+    "Water Vapor (6.7 um)": {
+        "center_wn": 1493,  # cm-^-1
         "type": "thermal",
         "tau_wv_scale": 5.0,  # Strong water vapor absorption
         "description": "WV channel - upper tropospheric humidity"
     },
-    "CO2 (15 μm)": {
-        "center_wn": 667,  # cm⁻¹
+    "CO2 (15 um)": {
+        "center_wn": 667,  # cm-^-1
         "type": "thermal",
         "tau_co2": 50.0,  # Very optically thick
         "description": "CO2 band - stratospheric temperature"
@@ -79,11 +79,11 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Satellite channels simulated:
-  VIS (0.65 μm)      - Visible reflectance
-  NIR (0.86 μm)      - Near-infrared reflectance
-  IR Window (11 μm)  - Surface/cloud temperature
-  Water Vapor (6.7μm)- Upper tropospheric humidity
-  CO2 (15 μm)        - Stratospheric temperature
+  VIS (0.65 um)      - Visible reflectance
+  NIR (0.86 um)      - Near-infrared reflectance
+  IR Window (11 um)  - Surface/cloud temperature
+  Water Vapor (6.7um)- Upper tropospheric humidity
+  CO2 (15 um)        - Stratospheric temperature
 
 Examples:
   %(prog)s                              # Clear sky
@@ -143,16 +143,44 @@ def get_surface_properties(surface_type):
     return properties.get(surface_type, properties["land"])
 
 
+def brightness_temperature_from_flux(flux, temperature_ref):
+    """
+    Estimate brightness temperature from thermal flux.
+
+    For a gray atmosphere, the brightness temperature is approximately
+    the temperature of the effective emitting level.
+
+    Parameters
+    ----------
+    flux : float
+        Upwelling thermal flux in W/m^2
+    temperature_ref : float
+        Reference temperature for the emitting surface/layer
+
+    Returns
+    -------
+    T_b : float
+        Brightness temperature in K
+    """
+    # For thermal emission, F = epsilon * sigma * T^4
+    # T_b = (F / sigma)^0.25 assumes unity emissivity
+    if flux <= 0:
+        return 0.0
+
+    T_b = (flux / STEFAN_BOLTZMANN)**0.25
+    return T_b
+
+
 def brightness_temperature(radiance, wavenumber):
     """
-    Convert radiance to brightness temperature using inverse Planck.
+    Convert spectral radiance to brightness temperature using inverse Planck.
 
     Parameters
     ----------
     radiance : float
-        Radiance in W/m²/sr/cm⁻¹
+        Spectral radiance in W/m^2/sr/cm^-1
     wavenumber : float
-        Wavenumber in cm⁻¹
+        Wavenumber in cm^-1
 
     Returns
     -------
@@ -161,23 +189,19 @@ def brightness_temperature(radiance, wavenumber):
     """
     from raf_tran.utils.constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, BOLTZMANN_CONSTANT
 
-    # Convert wavenumber to m⁻¹
-    nu = wavenumber * 100  # cm⁻¹ to m⁻¹
-
-    c1 = 2 * PLANCK_CONSTANT * SPEED_OF_LIGHT**2
-    c2 = PLANCK_CONSTANT * SPEED_OF_LIGHT / BOLTZMANN_CONSTANT
-
-    # Inverse Planck function
-    # B = c1 * nu³ / (exp(c2*nu/T) - 1)
-    # T = c2 * nu / ln(1 + c1*nu³/B)
-
-    # Convert radiance from W/m²/sr/cm⁻¹ to W/m²/sr/m⁻¹
-    B = radiance / 100  # W/m²/sr/m⁻¹
-
-    if B <= 0:
+    if radiance <= 0:
         return 0.0
 
-    T_b = c2 * nu / np.log(1 + c1 * nu**3 / B)
+    # Planck function in wavenumber form:
+    # B_nu = c1 * nu^3 / (exp(c2*nu/T) - 1)
+    # where c1 = 2*h*c^2 and c2 = h*c/k
+    # with nu in cm^-1, B_nu in W/m^2/sr/cm^-1
+
+    c1 = 1.191042e-5  # W/m^2/sr/(cm^-1)^4 - first radiation constant for wavenumber
+    c2 = 1.4387769    # cm*K - second radiation constant
+
+    # Inverse Planck: T = c2 * nu / ln(1 + c1*nu^3/B)
+    T_b = c2 * wavenumber / np.log(1 + c1 * wavenumber**3 / radiance)
     return T_b
 
 
@@ -187,8 +211,8 @@ def main():
     print("=" * 80)
     print("SATELLITE OBSERVATION SIMULATION")
     print("=" * 80)
-    print(f"\nSolar zenith angle: {args.sza}°")
-    print(f"Viewing zenith angle: {args.vza}°")
+    print(f"\nSolar zenith angle: {args.sza} deg")
+    print(f"Viewing zenith angle: {args.vza} deg")
     print(f"Surface type: {args.surface_type}")
     print(f"Cloud cover: {args.cloud_cover * 100:.0f}%")
     if args.cloud_cover > 0:
@@ -259,8 +283,9 @@ def main():
                 surface_albedo=surface_albedo,
             )
 
-            # Reflectance = upward flux / incoming flux
-            reflectance_clear = result_clear.flux_up[0] / (SOLAR_CONSTANT * mu0)
+            # Reflectance = upward flux at TOA / incoming flux
+            # TOA = index -1
+            reflectance_clear = result_clear.flux_up[-1] / (SOLAR_CONSTANT * mu0)
 
             # Cloudy calculation
             if args.cloud_cover > 0:
@@ -282,7 +307,7 @@ def main():
                     flux_toa=SOLAR_CONSTANT,
                     surface_albedo=surface_albedo,
                 )
-                reflectance_cloudy = result_cloudy.flux_up[0] / (SOLAR_CONSTANT * mu0)
+                reflectance_cloudy = result_cloudy.flux_up[-1] / (SOLAR_CONSTANT * mu0)
 
                 # Weighted average
                 reflectance = (1 - args.cloud_cover) * reflectance_clear + args.cloud_cover * reflectance_cloudy
@@ -312,7 +337,7 @@ def main():
             for i in range(n_layers):
                 tau_ir[i] = wv_scale * h2o_vmr[i] * number_density[i] * dz[i] * 1e-28
 
-            # CO2 absorption for 15 μm channel
+            # CO2 absorption for 15 um channel
             if "CO2" in channel_name:
                 tau_ir += props.get("tau_co2", 0) * np.ones(n_layers) / n_layers
 
@@ -329,17 +354,29 @@ def main():
                 surface_emissivity=surface_props["emissivity"],
             )
 
-            # Convert to brightness temperature
-            radiance_clear = result_clear.flux_up[0] / np.pi  # Approximate radiance
-            T_b_clear = brightness_temperature(radiance_clear * 0.01, wavenumber)
+            # For window channels with low optical depth, T_b approximates surface T
+            # For opaque channels, T_b reflects effective emitting level temperature
+            tau_total = np.sum(tau_ir)
 
-            # For water vapor and CO2 channels, use weighting function approach
-            if "Water Vapor" in channel_name:
-                # WV channel sees upper troposphere
-                T_b_clear = np.mean(temperature[20:35])  # ~5-10 km
+            if "Window" in channel_name:
+                # IR window: atmosphere is mostly transparent
+                # T_b is close to surface temperature, slightly reduced by atmospheric absorption
+                transmission = np.exp(-tau_total / mu_view)
+                T_b_clear = T_surface * transmission + np.mean(temperature[:10]) * (1 - transmission)
+            elif "Water Vapor" in channel_name:
+                # WV channel sees upper troposphere where water vapor emission peaks
+                # Find effective emitting level (where tau from TOA ~ 1)
+                tau_cumsum = np.cumsum(tau_ir[::-1])[::-1]
+                eff_level = np.argmin(np.abs(tau_cumsum - 1.0))
+                T_b_clear = temperature[min(eff_level, n_layers-1)]
             elif "CO2" in channel_name:
-                # CO2 channel sees stratosphere
-                T_b_clear = np.mean(temperature[35:])  # Above 10 km
+                # CO2 channel is very opaque - sees high altitude (stratosphere)
+                # Effective emitting temperature near tropopause or above
+                T_b_clear = np.mean(temperature[-10:])  # Upper layers
+            else:
+                # Generic thermal channel
+                # TOA = index -1
+                T_b_clear = brightness_temperature_from_flux(result_clear.flux_up[-1], T_surface)
 
             # Cloudy calculation
             if args.cloud_cover > 0:
@@ -373,18 +410,18 @@ def main():
     if args.cloud_cover > 0:
         print(f"""
 CLOUD DETECTION:
-  - VIS channel shows high reflectance ({results['VIS (0.65 μm)']['value']:.0f}%) due to clouds
-  - IR Window shows cold brightness temp ({results['IR Window (11 μm)']['value']:.0f} K)
+  - VIS channel shows high reflectance ({results['VIS (0.65 um)']['value']:.0f}%) due to clouds
+  - IR Window shows cold brightness temp ({results['IR Window (11 um)']['value']:.0f} K)
     indicating cloud-top at ~{args.cloud_height/1000:.1f} km
-  - Cloud-top temp ({T_cloud:.0f} K) vs surface ({T_surface:.0f} K): Δ={T_surface-T_cloud:.0f} K
+  - Cloud-top temp ({T_cloud:.0f} K) vs surface ({T_surface:.0f} K): Delta={T_surface-T_cloud:.0f} K
 """)
     else:
         print(f"""
 CLEAR SKY OBSERVATIONS:
-  - VIS reflectance ({results['VIS (0.65 μm)']['value']:.0f}%) shows {args.surface_type} surface
-  - IR Window ({results['IR Window (11 μm)']['value']:.0f} K) shows surface temperature
-  - Water Vapor channel ({results['Water Vapor (6.7 μm)']['value']:.0f} K) shows upper troposphere
-  - CO2 channel ({results['CO2 (15 μm)']['value']:.0f} K) shows stratospheric temperature
+  - VIS reflectance ({results['VIS (0.65 um)']['value']:.0f}%) shows {args.surface_type} surface
+  - IR Window ({results['IR Window (11 um)']['value']:.0f} K) shows surface temperature
+  - Water Vapor channel ({results['Water Vapor (6.7 um)']['value']:.0f} K) shows upper troposphere
+  - CO2 channel ({results['CO2 (15 um)']['value']:.0f} K) shows stratospheric temperature
 """)
 
     # Plotting
@@ -417,7 +454,7 @@ CLEAR SKY OBSERVATIONS:
             ax2 = axes[0, 1]
 
             channels = list(results.keys())
-            thermal_channels = [c for c in channels if 'μm)' in c and float(c.split('(')[1].split()[0]) > 1]
+            thermal_channels = [c for c in channels if 'um)' in c and float(c.split('(')[1].split()[0]) > 1]
             reflect_channels = [c for c in channels if c not in thermal_channels]
 
             # Reflective channels

@@ -41,6 +41,22 @@ docs = [
     "sphinx>=6.0.0",
     "sphinx-rtd-theme>=1.0.0",
 ]
+viz = [
+    "matplotlib>=3.5.0",
+]
+config = [
+    "pyyaml>=6.0",
+]
+report = [
+    "reportlab>=4.0.0",
+    "Pillow>=9.0.0",
+]
+all = [
+    "matplotlib>=3.5.0",
+    "pyyaml>=6.0",
+    "reportlab>=4.0.0",
+    "Pillow>=9.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/cohyos/RAF-tran"
