@@ -271,45 +271,54 @@ def compute_snr(signal_irradiance: float,
                 n_frames: int = 1,
                 tdi_stages: int = 1) -> float:
     """
-    Compute signal-to-noise ratio for a point source on a single pixel.
+    Compute SNR for air-to-air detection using D*-based noise model.
 
-    SNR = (signal_power * tint) / NEP
-
-    For a thermal detector, NEP relates to NETD:
-    NEP ~ NETD * (dL/dT)^-1 * A_pixel * Omega
-
-    We use a simplified radiometric SNR model:
-    SNR = (E_signal * A_aperture * tint) / (NEP * sqrt(BW))
-
-    Adjusted for frame averaging and TDI.
+    Derives detector D* from NETD, then computes NEP to get physically
+    meaningful noise floor. This provides realistic detection ranges
+    with proper sensor differentiation.
     """
-    # Collected signal energy
+    # Signal power collected by aperture
     signal_power = signal_irradiance * aperture_m2
-    signal_energy = signal_power * integration_time_s
 
-    # Noise: derive from NETD
-    # NETD is the temperature difference that gives SNR=1 against background
-    # For a ~300K background, dL/dT ~ 2e-5 W/m^2/sr/K in MWIR
-    # We model noise as: noise_equivalent_irradiance = NETD_fraction * background
-    # where NETD_fraction represents the fractional noise level
+    # Derive D* from NETD
+    # Reference: cooled MWIR detector with NETD=20mK has D* ~ 1e11 cm√Hz/W
+    reference_netd_k = 0.020  # 20 mK
+    reference_dstar = 1e11   # cm·√Hz/W for cooled MWIR at 20mK NETD
 
-    # Background signal per pixel
+    # Scale D* by NETD ratio (better NETD = higher D*)
+    dstar = reference_dstar * (reference_netd_k / max(netd_k, 0.001))
+
+    # Cap D* at realistic limits
+    dstar = min(dstar, 5e11)
+    dstar = max(dstar, 1e8)
+
+    # NEP = √(Ad × Δf) / D*
+    detector_area_cm2 = pixel_area_m2 * 1e4  # m² to cm²
+    noise_bandwidth_hz = 1.0 / (2.0 * integration_time_s)
+
+    nep = math.sqrt(detector_area_cm2 * noise_bandwidth_hz) / dstar  # Watts
+
+    # Background-induced noise (shot noise from background photons)
     pixel_solid_angle = pixel_area_m2 / (focal_length_m ** 2)
     bg_power = background_radiance * aperture_m2 * pixel_solid_angle
-    bg_energy = bg_power * integration_time_s
 
-    # Noise equivalent signal (proportional to NETD / T_scene * background)
-    # NETD/T_scene gives the fractional noise
-    noise_fraction = netd_k / T_AMBIENT_K
-    noise_energy = noise_fraction * bg_energy
+    # For photon-limited detection, noise ~ sqrt(background)
+    photon_energy_j = 4e-20  # Approximate for MWIR
+    if bg_power > 0:
+        bg_photon_rate = bg_power / photon_energy_j
+        bg_shot_noise = math.sqrt(bg_photon_rate * integration_time_s) * photon_energy_j / integration_time_s
+    else:
+        bg_shot_noise = 0.0
 
-    if noise_energy <= 0:
-        # Use a minimum noise floor
-        noise_energy = signal_energy * 0.01
+    # Total noise power (RSS of detector noise and background shot noise)
+    total_noise_power = math.sqrt(nep**2 + bg_shot_noise**2)
 
-    # SNR with frame averaging and TDI improvement
+    # Ensure minimum noise floor
+    total_noise_power = max(total_noise_power, 1e-18)
+
+    # SNR with frame averaging
     n_effective = math.sqrt(n_frames * tdi_stages)
-    snr = (signal_energy / noise_energy) * n_effective
+    snr = (signal_power / total_noise_power) * n_effective
 
     return snr
 

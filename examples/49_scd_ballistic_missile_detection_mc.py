@@ -198,27 +198,56 @@ def compute_snr(signal_irradiance: float, aperture_m2: float, pixel_area_m2: flo
                 focal_length_m: float, integration_time_s: float, netd_k: float,
                 background_radiance: float, n_frames: int = 1,
                 tdi_stages: int = 1) -> float:
-    signal_power = signal_irradiance * aperture_m2
-    signal_energy = signal_power * integration_time_s
+    """
+    SNR for space-based sensor using D*-based noise model.
 
+    Derives detector D* (specific detectivity) from NETD, then computes
+    NEP (noise equivalent power) to get a physically meaningful noise floor.
+    """
+    # Signal power collected by aperture
+    signal_power = signal_irradiance * aperture_m2
+
+    # Derive D* from NETD
+    # Reference: cooled MWIR detector with NETD=20mK has D* ~ 1e11 cm√Hz/W
+    reference_netd_k = 0.020  # 20 mK
+    reference_dstar = 1e11   # cm·√Hz/W for cooled MWIR at 20mK NETD
+
+    # Scale D* by NETD ratio (better NETD = higher D*)
+    dstar = reference_dstar * (reference_netd_k / max(netd_k, 0.001))
+
+    # Cap D* at realistic limits
+    dstar = min(dstar, 5e11)
+    dstar = max(dstar, 1e8)
+
+    # NEP = √(Ad × Δf) / D*
+    detector_area_cm2 = pixel_area_m2 * 1e4  # m² to cm²
+    noise_bandwidth_hz = 1.0 / (2.0 * integration_time_s)
+
+    nep = math.sqrt(detector_area_cm2 * noise_bandwidth_hz) / dstar  # Watts
+
+    # Background-induced noise (shot noise from background photons)
     pixel_solid_angle = pixel_area_m2 / (focal_length_m ** 2)
     bg_power = background_radiance * aperture_m2 * pixel_solid_angle
-    bg_energy = bg_power * integration_time_s
 
-    if bg_energy > 0:
-        noise_fraction = netd_k / max(T_AMBIENT_K, 50.0)
-        noise_energy = noise_fraction * bg_energy
+    # For photon-limited detection, noise ~ sqrt(background)
+    photon_energy_j = 4e-20  # Approximate for MWIR
+    if bg_power > 0:
+        bg_photon_rate = bg_power / photon_energy_j
+        bg_shot_noise = math.sqrt(bg_photon_rate * integration_time_s) * photon_energy_j / integration_time_s
     else:
-        noise_energy = 0.0
+        bg_shot_noise = 0.0
 
-    min_noise = netd_k / 300.0 * 1e-12 * aperture_m2 * integration_time_s
-    noise_energy = max(noise_energy, min_noise)
+    # Total noise power (RSS of detector noise and background shot noise)
+    total_noise_power = math.sqrt(nep**2 + bg_shot_noise**2)
 
-    if noise_energy <= 0:
-        noise_energy = signal_energy * 0.001
+    # Ensure minimum noise floor
+    total_noise_power = max(total_noise_power, 1e-18)
 
+    # SNR with frame averaging
     n_effective = math.sqrt(n_frames * tdi_stages)
-    return (signal_energy / noise_energy) * n_effective
+    snr = (signal_power / total_noise_power) * n_effective
+
+    return snr
 
 
 def find_detection_range(target: TargetSignature, path: PathConditions,

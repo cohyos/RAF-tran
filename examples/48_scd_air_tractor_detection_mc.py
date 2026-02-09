@@ -188,23 +188,45 @@ def compute_snr(signal_irradiance: float, aperture_m2: float, pixel_area_m2: flo
                 focal_length_m: float, integration_time_s: float, netd_k: float,
                 background_radiance: float, clutter_factor: float,
                 n_frames: int = 1, tdi_stages: int = 1) -> float:
+    """
+    SNR computation for ground-based sensor using D*-based noise model
+    with clutter contribution.
+    """
+    # Signal power collected by aperture
     signal_power = signal_irradiance * aperture_m2
-    signal_energy = signal_power * integration_time_s
 
+    # Derive D* from NETD
+    reference_netd_k = 0.020  # 20 mK
+    reference_dstar = 1e11   # cm·√Hz/W for cooled MWIR at 20mK NETD
+
+    dstar = reference_dstar * (reference_netd_k / max(netd_k, 0.001))
+    dstar = min(dstar, 5e11)
+    dstar = max(dstar, 1e8)
+
+    # NEP = √(Ad × Δf) / D*
+    detector_area_cm2 = pixel_area_m2 * 1e4
+    noise_bandwidth_hz = 1.0 / (2.0 * integration_time_s)
+    nep = math.sqrt(detector_area_cm2 * noise_bandwidth_hz) / dstar
+
+    # Background-induced noise
     pixel_solid_angle = pixel_area_m2 / (focal_length_m ** 2)
     bg_power = background_radiance * aperture_m2 * pixel_solid_angle
-    bg_energy = bg_power * integration_time_s
 
-    noise_fraction = netd_k / T_AMBIENT_K
-    sensor_noise = noise_fraction * bg_energy
-    clutter_noise = clutter_factor * bg_energy * 0.05
-    total_noise = math.sqrt(sensor_noise ** 2 + clutter_noise ** 2)
+    photon_energy_j = 4e-20
+    if bg_power > 0:
+        bg_photon_rate = bg_power / photon_energy_j
+        bg_shot_noise = math.sqrt(bg_photon_rate * integration_time_s) * photon_energy_j / integration_time_s
+    else:
+        bg_shot_noise = 0.0
 
-    if total_noise <= 0:
-        total_noise = signal_energy * 0.01
+    # Clutter noise
+    clutter_noise_power = clutter_factor * bg_power * 0.05
+
+    total_noise_power = math.sqrt(nep**2 + bg_shot_noise**2 + clutter_noise_power**2)
+    total_noise_power = max(total_noise_power, 1e-18)
 
     n_effective = math.sqrt(n_frames * tdi_stages)
-    return (signal_energy / total_noise) * n_effective
+    return (signal_power / total_noise_power) * n_effective
 
 
 def find_detection_range(target: TargetSignature, atm: AtmosphericConditions,

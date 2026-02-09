@@ -177,22 +177,41 @@ def compute_signal_irradiance(target: TargetSignature, range_m: float,
 def compute_snr(signal_irradiance: float, aperture_m2: float, pixel_area_m2: float,
                 focal_length_m: float, integration_time_s: float, netd_k: float,
                 background_radiance: float, n_frames: int = 1, tdi_stages: int = 1) -> float:
+    """
+    Compute SNR for air-to-air detection using D*-based noise model.
+    """
+    # Signal power collected by aperture
     signal_power = signal_irradiance * aperture_m2
-    signal_energy = signal_power * integration_time_s
 
+    # Derive D* from NETD
+    reference_netd_k = 0.020  # 20 mK
+    reference_dstar = 1e11   # cm·√Hz/W for cooled MWIR at 20mK NETD
+
+    dstar = reference_dstar * (reference_netd_k / max(netd_k, 0.001))
+    dstar = min(dstar, 5e11)
+    dstar = max(dstar, 1e8)
+
+    # NEP = √(Ad × Δf) / D*
+    detector_area_cm2 = pixel_area_m2 * 1e4
+    noise_bandwidth_hz = 1.0 / (2.0 * integration_time_s)
+    nep = math.sqrt(detector_area_cm2 * noise_bandwidth_hz) / dstar
+
+    # Background-induced noise
     pixel_solid_angle = pixel_area_m2 / (focal_length_m ** 2)
     bg_power = background_radiance * aperture_m2 * pixel_solid_angle
-    bg_energy = bg_power * integration_time_s
 
-    noise_fraction = netd_k / T_AMBIENT_K
-    noise_energy = noise_fraction * bg_energy
+    photon_energy_j = 4e-20
+    if bg_power > 0:
+        bg_photon_rate = bg_power / photon_energy_j
+        bg_shot_noise = math.sqrt(bg_photon_rate * integration_time_s) * photon_energy_j / integration_time_s
+    else:
+        bg_shot_noise = 0.0
 
-    if noise_energy <= 0:
-        noise_energy = signal_energy * 0.01
+    total_noise_power = math.sqrt(nep**2 + bg_shot_noise**2)
+    total_noise_power = max(total_noise_power, 1e-18)
 
     n_effective = math.sqrt(n_frames * tdi_stages)
-    snr = (signal_energy / noise_energy) * n_effective
-    return snr
+    return (signal_power / total_noise_power) * n_effective
 
 
 def find_detection_range(target: TargetSignature, atm: AtmosphericConditions,
